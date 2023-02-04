@@ -5,10 +5,19 @@
 #include<filesystem>
 #include<dist/jsoncpp.cpp>
 
+struct course_sections_data_t {
+        int credMin = Json::Value::maxInt;
+        int credMax = 0;
+        int seatsTaken = 0;
+        int capacity = 0;
+        int remaining = 0;
+};
+
 namespace fs = std::filesystem;
 void handle_term(const fs::directory_entry&,Json::Value&);
 void handle_course(const Json::Value&,const std::string&,Json::Value&);
 void handle_attribute(Json::Value&,const std::string&);
+course_sections_data_t handle_sections(const Json::Value&);
 
 int main(const int argc,const char** argv) {
         if(argc < 2) {
@@ -83,18 +92,23 @@ void handle_term(const fs::directory_entry& term_entry,
 
 void handle_course(const Json::Value& course,const std::string& term,Json::Value& terms_offered) {
         const auto course_code = course["id"].asString();
+
         auto& course_term = terms_offered[course_code][term];
+
         course_term["title"] = course["title"];
 
-        int credMin = Json::Value::maxInt;
-        int credMax = 0;
-        for(auto section : course["sections"]) {
-                credMin = std::min(credMin,section["credMin"].asInt());
-                credMax = std::max(credMax,section["credMax"].asInt());
-        }
-        course_term["credMin"] = credMin;
-        course_term["credMax"] = credMax;
+        Json::Value sections = course["sections"];
+
+        course_sections_data_t course_sections_data = handle_sections(sections);
         
+        course_term["credits"]["min"]     = course_sections_data.credMin;
+        course_term["credits"]["max"]     = course_sections_data.credMax;
+        course_term["seats"]["taken"]     = course_sections_data.seatsTaken;
+        course_term["seats"]["capacity"]  = course_sections_data.capacity;
+        course_term["seats"]["remaining"] = course_sections_data.remaining;
+        
+        // Need to do this because for some reason attributes are by
+        // section instead of by course
         const auto section = course["sections"][0];
 
         const auto delim = std::regex(" and |, ");
@@ -102,14 +116,38 @@ void handle_course(const Json::Value& course,const std::string& term,Json::Value
         const auto end_itr = std::sregex_token_iterator();
 
         auto attributes_itr = std::sregex_token_iterator(
-                        attributes_str.begin(),
-                        attributes_str.end(),
-                        delim,-1);
+                                      attributes_str.begin(),
+                                      attributes_str.end(),
+                                      delim,
+                                      -1
+                              );
         while(attributes_itr != end_itr
            && !attributes_itr->str().empty()) {
                 handle_attribute(course_term,attributes_itr->str());
                 attributes_itr++;
         }
+}
+
+course_sections_data_t handle_sections(const Json::Value& sections) {
+        course_sections_data_t csd;
+        //csd.credMin = Json::Value::maxInt;
+        //csd.credMax = 0;
+        //csd.seatsTaken = 0, capacity = 0, remaining = 0;
+        for(auto section : sections) {
+                // Get min/max credits *of all sections*
+                // (RCOS looking at you)
+                csd.credMin = std::min(csd.credMin,section["credMin"].asInt());
+                csd.credMax = std::max(csd.credMax,section["credMax"].asInt());
+                
+                // Add seating data of all sections together.
+                // remaining might get clobbered by some sections
+                // having negative seats, but this probably won't
+                // be too much of an issue
+                csd.seatsTaken += section["act"].asInt();
+                csd.capacity   += section["cap"].asInt();
+                csd.remaining  += section["rem"].asInt();
+        }
+        return csd;
 }
 
 void handle_attribute(Json::Value& course_term,const std::string& attribute) {
