@@ -3,6 +3,7 @@
 #include<fstream>
 #include<iostream>
 #include<filesystem>
+#include<unordered_set>
 #include<dist/jsoncpp.cpp>
 
 namespace fs = std::filesystem;
@@ -15,6 +16,8 @@ void handle_course_summer(const Json::Value&,const std::string&,Json::Value&);
 void handle_attribute(const std::string&,Json::Value&);
 void handle_attributes(const Json::Value&,Json::Value&);
 void handle_sections(const Json::Value&,Json::Value&);
+void handle_instructors(const Json::Value&,std::unordered_set<std::string>&);
+void handle_multiple_instructors(const std::string&,std::unordered_set<std::string>&);
 
 int main(const int argc,const char** argv) {
         if(argc < 2) {
@@ -113,6 +116,7 @@ void handle_course(const Json::Value& course,
         const Json::Value& sections = course["sections"];
 
         handle_sections(sections,course_term);
+
         handle_attributes(course["sections"][0],course_term);
 }
 
@@ -181,6 +185,7 @@ void handle_sections(const Json::Value& sections,
                      Json::Value& course_term) {
         int credMin = Json::Value::maxInt, credMax = 0;
         int seatsTaken = 0, capacity = 0, remaining = 0;
+        std::unordered_set<std::string> instructors;
         for(const auto& section : sections) {
                 // Get min/max credits *of all sections*
                 // (RCOS looking at you)
@@ -194,6 +199,8 @@ void handle_sections(const Json::Value& sections,
                 seatsTaken += section["act"].asInt();
                 capacity   += section["cap"].asInt();
                 remaining  += section["rem"].asInt();
+
+                handle_instructors(section,instructors);
         }
 
         course_term["credits"]["min"]     = credMin;
@@ -201,6 +208,37 @@ void handle_sections(const Json::Value& sections,
         course_term["seats"]["taken"]     = seatsTaken;
         course_term["seats"]["capacity"]  = capacity;
         course_term["seats"]["remaining"] = remaining;
+        for(const auto& instructor : instructors) {
+                course_term["instructors"].append(instructor);
+        }
+}
+
+void handle_instructors(const Json::Value& section,
+                        std::unordered_set<std::string>& instructors) {
+        for(const auto& timeslot : section["timeslots"]) {
+                handle_multiple_instructors(timeslot["instructor"].asString(),instructors);
+        }
+}
+
+void handle_multiple_instructors(const std::string& instructor_str,
+                                 std::unordered_set<std::string>& instructors) {
+        // Pseudo-string split on commas
+        const auto delim = std::regex(", ?");
+        const auto end_itr = std::sregex_token_iterator();
+        auto instructors_itr = std::sregex_token_iterator(
+                                       instructor_str.begin(),
+                                       instructor_str.end(),
+                                       delim,
+                                       -1
+                               );
+
+        for(;instructors_itr != end_itr
+          && !instructors_itr->str().empty();
+             instructors_itr++) {
+                const std::string& str = instructors_itr->str();
+                if(str == "TBA") continue;
+                instructors.insert(str);
+        }
 }
 
 void handle_attributes(const Json::Value& section,
@@ -218,10 +256,12 @@ void handle_attributes(const Json::Value& section,
                               );
 
         // Makes the JSON list of attributes
-        while(attributes_itr != end_itr
-           && !attributes_itr->str().empty()) {
-                handle_attribute(attributes_itr->str(),course_term["attributes"]);
-                attributes_itr++;
+        Json::Value& attributes = course_term["attributes"];
+        attributes = Json::arrayValue;
+        for(;attributes_itr != end_itr
+          && !attributes_itr->str().empty();
+             attributes_itr++) {
+                handle_attribute(attributes_itr->str(),attributes);
         }
 }
 
