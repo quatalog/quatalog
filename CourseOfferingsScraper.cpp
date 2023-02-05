@@ -7,26 +7,41 @@
 #include<dist/jsoncpp.cpp>
 
 namespace fs = std::filesystem;
-using course_handler_t = void(const Json::Value&,const std::string&,Json::Value&);
-void handle_term(const fs::directory_entry&,Json::Value&);
-void handle_term_dirs(const std::set<fs::directory_entry>&,Json::Value&);
-void handle_prefix(const Json::Value&,const std::string&,Json::Value&,course_handler_t*);
-void handle_course(const Json::Value&,const std::string&,Json::Value&);
-void handle_course_summer(const Json::Value&,const std::string&,Json::Value&);
-void handle_attribute(const std::string&,Json::Value&);
-void handle_attributes(const Json::Value&,Json::Value&);
-void handle_sections(const Json::Value&,Json::Value&);
-void handle_instructors(const Json::Value&,std::unordered_set<std::string>&);
-void handle_multiple_instructors(const std::string&,std::unordered_set<std::string>&);
+struct quatalog_data_t {
+        Json::Value terms_offered;
+        Json::Value prerequisites;
+};
+using course_handler_t = void(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
+
+void handle_term_dirs(const std::set<fs::directory_entry>&,quatalog_data_t&);
+void handle_term(const fs::directory_entry& term_entry,quatalog_data_t&);
+void handle_prefix(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&,course_handler_t*);
+void handle_course(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
+void handle_course_summer(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
+void handle_everything(const Json::Value& sections,
+                       const Json::Value& title,
+                       Json::Value& course_term,
+                       Json::Value&);
+void handle_sections(const Json::Value& sections,
+                     Json::Value& course_term);
+void handle_instructors(const Json::Value& section,
+                        std::unordered_set<std::string>& instructors);
+void handle_multiple_instructors(const std::string& instructor_str,
+                                 std::unordered_set<std::string>& instructors);
+void handle_attributes(const Json::Value& section,
+                       Json::Value& course_term);
+void handle_attribute(const std::string& attribute,
+                      Json::Value& attributes);
 
 int main(const int argc,const char** argv) {
-        if(argc < 2) {
+        if(argc < 3) {
                 std::cerr << "Bad number of arguments " << argc << std::endl;
                 return EXIT_FAILURE;
         }
 
-        const auto data_dir_path = fs::path(argv[1]);
-        
+        const auto& data_dir_path = fs::path(argv[1]);
+        const std::string& terms_offered_filename = std::string(argv[2]);
+
         if(!fs::is_directory(data_dir_path)) {
                 std::cerr << "Data dir argument " << data_dir_path << " is not a directory" << std::endl;
                 return EXIT_FAILURE;
@@ -40,29 +55,29 @@ int main(const int argc,const char** argv) {
         }
 
         // Begin JSON manipulation
-        Json::Value terms_offered;
-        terms_offered["all_terms"] = Json::arrayValue;
-        handle_term_dirs(term_dirs,terms_offered);
+        quatalog_data_t data;
+        handle_term_dirs(term_dirs,data); //terms_offered,prerequisites);
 
-        std::cout << terms_offered << std::endl;
+        std::fstream terms_offered_file{terms_offered_filename,std::ios::out};
+        terms_offered_file << data.terms_offered << std::endl;
+        terms_offered_file.close();
 
         return EXIT_SUCCESS;
 }
 
 void handle_term_dirs(const std::set<fs::directory_entry>& term_dirs,
-                      Json::Value& terms_offered) {
+                      quatalog_data_t& data) {
         for(auto term : term_dirs) {
                 if(!fs::is_directory(term)) {
                         continue;
                 }
 
-                handle_term(term,terms_offered);
+                handle_term(term,data);
         }
 
 }
 
-void handle_term(const fs::directory_entry& term_entry,
-                       Json::Value& terms_offered) {
+void handle_term(const fs::directory_entry& term_entry,quatalog_data_t& data) {
         const fs::path dir = term_entry.path();
         const auto dirname = dir.string();
         const auto term = dir.stem().string();
@@ -72,10 +87,12 @@ void handle_term(const fs::directory_entry& term_entry,
         std::fstream prereqs_file{prereqs_filename,std::ios::in};
 
         std::cerr << "Processing term " << term << "..." << std::endl;
-        terms_offered["all_terms"].append(term);
+        data.terms_offered["all_terms"].append(term);
 
         Json::Value courses;
+        Json::Value prereqs;
         courses_file >> courses;
+        prereqs_file >> prereqs;
 
         course_handler_t* course_handler;
         if(term.substr(4,2) == "05") {
@@ -84,13 +101,17 @@ void handle_term(const fs::directory_entry& term_entry,
                 course_handler = handle_course;
         }
         for(auto& prefix : courses) {
-                handle_prefix(prefix,term,terms_offered,course_handler);
+                handle_prefix(prefix,term,data,prereqs,course_handler);
         }
+
+        courses_file.close();
+        prereqs_file.close();
 }
 
 void handle_prefix(const Json::Value& prefix,
                    const std::string& term,
-                   Json::Value& terms_offered,
+                   quatalog_data_t& data,
+                   const Json::Value& prereqs,
                    course_handler_t course_handler) {
 #ifdef DEBUG
         std::cerr << "\tProcessing prefix "
@@ -101,28 +122,26 @@ void handle_prefix(const Json::Value& prefix,
                   << std::endl;
 #endif
         for(auto& course : prefix["courses"]) {
-                course_handler(course,term,terms_offered);
+                course_handler(course,term,data,prereqs);
         }
 }
 
 void handle_course(const Json::Value& course,
                    const std::string& term,
-                   Json::Value& terms_offered) {
+                   quatalog_data_t& data,
+                   const Json::Value& prereqs) {
         const auto course_code = course["id"].asString();
         
-        auto& course_term = terms_offered[course_code][term];
-        course_term["title"] = course["title"];
+        auto& course_term = data.terms_offered[course_code][term];
 
         const Json::Value& sections = course["sections"];
-
-        handle_sections(sections,course_term);
-
-        handle_attributes(course["sections"][0],course_term);
+        handle_everything(sections,course["title"],course_term,data.prerequisites);
 }
 
 void handle_course_summer(const Json::Value& course,
                           const std::string& term,
-                          Json::Value& terms_offered) {
+                          quatalog_data_t& data,
+                          const Json::Value& prereqs) {
         const auto course_code = course["id"].asString();
 
         // sections[0]: Full term sections
@@ -158,27 +177,27 @@ void handle_course_summer(const Json::Value& course,
                 sections[subterm].append(section);
         }
 
-        auto& course_terms = terms_offered[course_code];
+        auto& course_terms = data.terms_offered[course_code];
         
-        // Forgive the repeated code; it's not that much of a mess
         if(subterm0) {
-                Json::Value& course_term = course_terms[term];
-                course_term["title"] = course["title"];
-                handle_sections(sections[0],course_term);
-                handle_attributes(sections[0][0],course_term);
+                handle_everything(sections[0],course["title"],course_terms[term],data.prerequisites);
         } else {
                 if(subterm1) {
-                        Json::Value& course_term = course_terms[term+"02"];
-                        course_term["title"] = course["title"];
-                        handle_sections(sections[1],course_term);
-                        handle_attributes(sections[1][0],course_term);
+                        handle_everything(sections[1],course["title"],course_terms[term+"02"],data.prerequisites);
                 } if(subterm2) {
-                        Json::Value& course_term = course_terms[term+"03"];
-                        course_term["title"] = course["title"];
-                        handle_sections(sections[2],course_term);
-                        handle_attributes(sections[2][0],course_term);
+                        handle_everything(sections[2],course["title"],course_terms[term+"03"],data.prerequisites);
                 }
         }
+}
+
+void handle_everything(const Json::Value& sections,
+                       const Json::Value& title,
+                       Json::Value& course_term,
+                       Json::Value& course_prerequisites) {
+        course_term["title"] = title;
+        handle_sections(sections,course_term);
+        handle_attributes(sections[0],course_term);
+        //handle_prereqs(sections[0],course_prerequisites);
 }
 
 void handle_sections(const Json::Value& sections,
