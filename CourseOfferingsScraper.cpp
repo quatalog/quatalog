@@ -9,7 +9,10 @@
 namespace fs = std::filesystem;
 struct quatalog_data_t {
         Json::Value terms_offered;
+        Json::Value cross_listings;
         Json::Value prerequisites;
+        Json::Value corequisites;
+        Json::Value attributes;
 };
 struct term_data_t {
         Json::Value courses;
@@ -31,17 +34,27 @@ void handle_attribute(const std::string&,Json::Value&);
 void handle_prereqs(const Json::Value&,const std::string&,Json::Value&,const Json::Value&);
 
 int main(const int argc,const char** argv) {
-        if(argc < 4) {
+        if(argc < 6) {
                 std::cerr << "Bad number of arguments " << argc << std::endl;
+                std::cerr << "Usage: " << argv[0]
+                          << " <data_directory>"
+                          << " <terms_offered_file>"
+                          << " <cross_listings_file>"
+                          << " <prerequisites_file>"
+                          << " <corequisites_file>"
+                          << " <attributes_file>" << std::endl;
                 return EXIT_FAILURE;
         }
 
         const auto& data_dir_path = fs::path(argv[1]);
         const std::string& terms_offered_filename = std::string(argv[2]);
-        const std::string& prerequisites_filename = std::string(argv[3]);
+        const std::string& cross_listings_filename = std::string(argv[3]);
+        const std::string& prerequisites_filename = std::string(argv[4]);
+        const std::string& corequisites_filename = std::string(argv[5]);
+        const std::string& attributes_filename = std::string(argv[6]);
 
         if(!fs::is_directory(data_dir_path)) {
-                std::cerr << "Data dir argument " << data_dir_path << " is not a directory" << std::endl;
+                std::cerr << "Data directory argument " << data_dir_path << " is not a directory" << std::endl;
                 return EXIT_FAILURE;
         }
 
@@ -54,14 +67,26 @@ int main(const int argc,const char** argv) {
 
         // Begin JSON manipulation
         quatalog_data_t data;
-        handle_term_dirs(term_dirs,data); //terms_offered,prerequisites);
+        handle_term_dirs(term_dirs,data);
 
-        std::fstream terms_offered_file{terms_offered_filename,std::ios::out};
-        std::fstream prerequisites_file{prerequisites_filename,std::ios::out};
-        terms_offered_file << data.terms_offered << std::endl;
-        prerequisites_file << data.prerequisites << std::endl;
+        // File I/O is my passion
+        std::fstream  terms_offered_file{terms_offered_filename,std::ios::out};
+        std::fstream cross_listings_file{cross_listings_filename,std::ios::out};
+        std::fstream  prerequisites_file{prerequisites_filename,std::ios::out};
+        std::fstream   corequisites_file{corequisites_filename,std::ios::out};
+        std::fstream     attributes_file{attributes_filename,std::ios::out};
+        
+        terms_offered_file  << data.terms_offered  << std::endl;
+        cross_listings_file << data.cross_listings << std::endl;
+        prerequisites_file  << data.prerequisites  << std::endl;
+        corequisites_file   << data.corequisites   << std::endl;
+        attributes_file     << data.attributes     << std::endl;
+        
         terms_offered_file.close();
+        cross_listings_file.close();
         prerequisites_file.close();
+        corequisites_file.close();
+        attributes_file.close();
 
         return EXIT_SUCCESS;
 }
