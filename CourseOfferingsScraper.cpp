@@ -18,20 +18,12 @@ void handle_term(const fs::directory_entry& term_entry,quatalog_data_t&);
 void handle_prefix(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&,course_handler_t*);
 void handle_course(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
 void handle_course_summer(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
-void handle_everything(const Json::Value& sections,
-                       const Json::Value& title,
-                       Json::Value& course_term,
-                       Json::Value&);
-void handle_sections(const Json::Value& sections,
-                     Json::Value& course_term);
-void handle_instructors(const Json::Value& section,
-                        std::unordered_set<std::string>& instructors);
-void handle_multiple_instructors(const std::string& instructor_str,
-                                 std::unordered_set<std::string>& instructors);
-void handle_attributes(const Json::Value& section,
-                       Json::Value& course_term);
-void handle_attribute(const std::string& attribute,
-                      Json::Value& attributes);
+void handle_everything(const Json::Value&,const Json::Value&,Json::Value& course_term,Json::Value&);
+void handle_sections(const Json::Value&,Json::Value&);
+void handle_instructors(const Json::Value&,std::unordered_set<std::string>&);
+void handle_multiple_instructors(const std::string&,std::unordered_set<std::string>&);
+void handle_attributes(const Json::Value&,Json::Value&);
+void handle_attribute(const std::string&,Json::Value&);
 
 int main(const int argc,const char** argv) {
         if(argc < 3) {
