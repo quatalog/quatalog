@@ -8,8 +8,8 @@ json.o: 3rdparty/jsoncpp/dist/jsoncpp.cpp
 
 3rdparty/jsoncpp/dist/jsoncpp.cpp:
 	git submodule update --init
-	find .
 	cd 3rdparty/jsoncpp; ./amalgamate.py
+	find .
 
 %.o: %.cpp %.hpp
 	$(CXX) $(CXXFLAGS) $? -o $@
