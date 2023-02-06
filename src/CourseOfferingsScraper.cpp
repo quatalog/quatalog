@@ -297,6 +297,8 @@ void handle_attribute(const std::string& attribute,
 
 void handle_term_attribute(const std::string& attribute,
                            Json::Value& attributes) {
+        // These are the attributes we want to display in the
+        // course years table
         if(attribute == "Communication Intensive") {
                 attributes.append("[CI]");
         } else if(attribute == "Writing Intensive") {
