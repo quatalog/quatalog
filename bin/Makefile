@@ -1,12 +1,13 @@
 CXX = clang++
 CXXFLAGS = -O2 -march=native -Wall -std=c++17
+vpath %.cpp ../src
 
 CourseOfferingsScraper: CourseOfferingsScraper.cpp json.o
 
-json.o: 3rdparty/jsoncpp/dist/jsoncpp.cpp
+json.o: ../3rdparty/jsoncpp/dist/jsoncpp.cpp
 	$(CXX) -c $(CXXFLAGS) $? -o $@
 
-3rdparty/jsoncpp/dist/jsoncpp.cpp:
+../3rdparty/jsoncpp/dist/jsoncpp.cpp:
 	git submodule update --init
 	cd 3rdparty/jsoncpp; ./amalgamate.py
 

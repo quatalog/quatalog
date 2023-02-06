@@ -4,7 +4,8 @@
 #include<iostream>
 #include<filesystem>
 #include<unordered_set>
-#include"3rdparty/jsoncpp/include/json/json.h"
+#include<json/json.h>
+
 
 namespace fs = std::filesystem;
 struct quatalog_data_t {
