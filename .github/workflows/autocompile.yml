@@ -14,7 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Compile (make)
-      run: make
+      run: |
+        find .
+        make
     - name: Push compiled binary
       run: |
         git config --global user.name "Quatalog Compiler"
