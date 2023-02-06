@@ -9,10 +9,7 @@
 namespace fs = std::filesystem;
 struct quatalog_data_t {
         Json::Value terms_offered;
-        Json::Value cross_listings;
         Json::Value prerequisites;
-        Json::Value corequisites;
-        Json::Value attributes;
 };
 struct term_data_t {
         Json::Value courses;
@@ -29,29 +26,26 @@ void handle_everything(const Json::Value&,const Json::Value&,Json::Value& course
 void handle_sections(const Json::Value&,Json::Value&);
 void handle_instructors(const Json::Value&,std::unordered_set<std::string>&);
 void handle_multiple_instructors(const std::string&,std::unordered_set<std::string>&);
-void handle_attributes(const Json::Value&,Json::Value&);
-void handle_attribute(const std::string&,Json::Value&);
+void handle_attributes(const Json::Value&,const std::string&,Json::Value&,Json::Value&);
+void handle_term_attribute(const std::string&,Json::Value&);
+void handle_attribute(const std::string&,Json::Value&,Json::Value&);
 void handle_prereqs(const Json::Value&,const std::string&,Json::Value&,const Json::Value&);
 
-int main(const int argc,const char** argv) {
-        if(argc < 6) {
-                std::cerr << "Bad number of arguments " << argc << std::endl;
+int main(const int argc,
+         const char** argv) {
+        if(argc != 4) {
+                std::cerr << "Bad number of arguments (" << argc << ")" << std::endl;
                 std::cerr << "Usage: " << argv[0]
                           << " <data_directory>"
                           << " <terms_offered_file>"
-                          << " <cross_listings_file>"
                           << " <prerequisites_file>"
-                          << " <corequisites_file>"
-                          << " <attributes_file>" << std::endl;
+                          << std::endl;
                 return EXIT_FAILURE;
         }
 
         const auto& data_dir_path = fs::path(argv[1]);
         const std::string& terms_offered_filename = std::string(argv[2]);
-        const std::string& cross_listings_filename = std::string(argv[3]);
-        const std::string& prerequisites_filename = std::string(argv[4]);
-        const std::string& corequisites_filename = std::string(argv[5]);
-        const std::string& attributes_filename = std::string(argv[6]);
+        const std::string& prerequisites_filename = std::string(argv[3]);
 
         if(!fs::is_directory(data_dir_path)) {
                 std::cerr << "Data directory argument " << data_dir_path << " is not a directory" << std::endl;
@@ -69,24 +63,14 @@ int main(const int argc,const char** argv) {
         quatalog_data_t data;
         handle_term_dirs(term_dirs,data);
 
-        // File I/O is my passion
         std::fstream  terms_offered_file{terms_offered_filename,std::ios::out};
-        std::fstream cross_listings_file{cross_listings_filename,std::ios::out};
         std::fstream  prerequisites_file{prerequisites_filename,std::ios::out};
-        std::fstream   corequisites_file{corequisites_filename,std::ios::out};
-        std::fstream     attributes_file{attributes_filename,std::ios::out};
         
         terms_offered_file  << data.terms_offered  << std::endl;
-        cross_listings_file << data.cross_listings << std::endl;
         prerequisites_file  << data.prerequisites  << std::endl;
-        corequisites_file   << data.corequisites   << std::endl;
-        attributes_file     << data.attributes     << std::endl;
         
         terms_offered_file.close();
-        cross_listings_file.close();
         prerequisites_file.close();
-        corequisites_file.close();
-        attributes_file.close();
 
         return EXIT_SUCCESS;
 }
@@ -103,7 +87,8 @@ void handle_term_dirs(const std::set<fs::directory_entry>& term_dirs,
 
 }
 
-void handle_term(const fs::directory_entry& term_entry,quatalog_data_t& quatalog_data) {
+void handle_term(const fs::directory_entry& term_entry,
+                 quatalog_data_t& quatalog_data) {
         const fs::path dir = term_entry.path();
         const auto dirname = dir.string();
         const auto term = dir.stem().string();
@@ -205,25 +190,38 @@ void handle_course_summer(const Json::Value& course,
         auto& course_terms = data.terms_offered[course_code];
         
         if(subterm0) {
-                handle_everything(sections[0],course,course_terms[term],data.prerequisites,term_prereqs);
-        } else {
-                if(subterm1) {
-                        handle_everything(sections[1],course,course_terms[term+"02"],data.prerequisites,term_prereqs);
-                } if(subterm2) {
-                        handle_everything(sections[2],course,course_terms[term+"03"],data.prerequisites,term_prereqs);
-                }
+                handle_everything(sections[0],
+                                  course,
+                                  course_terms[term],
+                                  data.prerequisites,
+                                  term_prereqs);
+                return;
+        }
+        if(subterm1) {
+                handle_everything(sections[1],
+                                  course,
+                                  course_terms[term+"02"],
+                                  data.prerequisites,
+                                  term_prereqs);
+        }
+        if(subterm2) {
+                handle_everything(sections[2],
+                                  course,
+                                  course_terms[term+"03"],
+                                  data.prerequisites,
+                                  term_prereqs);
         }
 }
 
 void handle_everything(const Json::Value& sections,
                        const Json::Value& course,
                        Json::Value& course_term,
-                       Json::Value& course_prerequisites,
+                       Json::Value& out_prereqs,
                        const Json::Value& term_prereqs) {
         course_term["title"] = course["title"];
         handle_sections(sections,course_term);
-        handle_attributes(sections[0],course_term);
-        handle_prereqs(sections[0],course["id"].asString(),course_prerequisites,term_prereqs);
+        handle_attributes(sections[0],course["id"].asString(),course_term,out_prereqs);
+        handle_prereqs(sections[0],course["id"].asString(),out_prereqs,term_prereqs);
 }
 
 void handle_sections(const Json::Value& sections,
@@ -287,11 +285,13 @@ void handle_multiple_instructors(const std::string& instructor_str,
 }
 
 void handle_attributes(const Json::Value& section,
-                       Json::Value& course_term) {
+                       const std::string& course_id,
+                       Json::Value& course_term,
+                       Json::Value& out_prereqs) {
+        const auto attributes_str = section["attribute"].asString();
         // This mess is basically C++'s string split but not using
         // as much memory as an actual string split
         const auto delim = std::regex(" and |, ");
-        const auto attributes_str = section["attribute"].asString();
         const auto end_itr = std::sregex_token_iterator();
         auto attributes_itr = std::sregex_token_iterator(
                                       attributes_str.begin(),
@@ -301,17 +301,34 @@ void handle_attributes(const Json::Value& section,
                               );
 
         // Makes the JSON list of attributes
-        Json::Value& attributes = course_term["attributes"];
-        attributes = Json::arrayValue;
+        Json::Value& term_attributes = course_term["attributes"];
+        Json::Value attributes = Json::arrayValue;
+        term_attributes = Json::arrayValue;
         for(;attributes_itr != end_itr
           && !attributes_itr->str().empty();
              attributes_itr++) {
-                handle_attribute(attributes_itr->str(),attributes);
+                handle_attribute(attributes_itr->str(),
+                                 attributes,
+                                 term_attributes);
         }
+        if(!attributes.empty())
+                out_prereqs[course_id]["attributes"] = attributes;
 }
 
 void handle_attribute(const std::string& attribute,
-                      Json::Value& attributes) {
+                      Json::Value& attributes,
+                      Json::Value& term_attributes) {
+        // COVID year screwed these attributes up; we will ignore them
+        if(attribute != "Hybrid:Online/In-Person Course"
+        && attribute != "Online Course"
+        && attribute != "In-Person Course") {
+                attributes.append(attribute);
+                handle_term_attribute(attribute,term_attributes);
+        }
+}
+
+void handle_term_attribute(const std::string& attribute,
+                           Json::Value& attributes) {
         if(attribute == "Communication Intensive") {
                 attributes.append("[CI]");
         } else if(attribute == "Writing Intensive") {
@@ -327,11 +344,24 @@ void handle_attribute(const std::string& attribute,
 
 void handle_prereqs(const Json::Value& section,
                     const std::string& course_id,
-                    Json::Value& course_prerequisites,
+                    Json::Value& out_data,
                     const Json::Value& term_prereqs) {
         const std::string& crn = section["crn"].asString();
-        const auto& prereqs = term_prereqs[crn]["prerequisites"];
-        if(!prereqs.empty()) {
-                course_prerequisites[course_id] = prereqs;
-        }
+        
+        const auto& in_obj = term_prereqs[crn];
+
+        const auto& corequisites = in_obj["corequisites"];
+        const auto& prerequisites = in_obj["prerequisites"];
+        const auto& cross_listings = in_obj["cross_list_courses"];
+        
+        // Scraper does not work as intended if we use
+        // a variable instead of repeating out_data[course_id]
+        // This would result in null entries for courses that
+        // have major restrictions or something else like that
+        if(!corequisites.empty())
+                out_data[course_id]["corequisites"] = corequisites;
+        if(!prerequisites.empty())
+                out_data[course_id]["prerequisites"] = prerequisites;
+        if(!cross_listings.empty())
+                out_data[course_id]["cross_listings"] = cross_listings;
 }
