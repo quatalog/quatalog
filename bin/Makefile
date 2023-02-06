@@ -9,7 +9,7 @@ json.o: ../3rdparty/jsoncpp/dist/jsoncpp.cpp
 
 ../3rdparty/jsoncpp/dist/jsoncpp.cpp:
 	git submodule update --init
-	cd 3rdparty/jsoncpp; ./amalgamate.py
+	cd ../3rdparty/jsoncpp; ./amalgamate.py
 
 %.o: %.cpp %.hpp
 	$(CXX) $(CXXFLAGS) $? -o $@
