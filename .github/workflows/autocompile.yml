@@ -8,12 +8,13 @@ on:
 
 jobs:
   build:
-
+    name: Build scraper
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout main branch
+      uses: actions/checkout@v3
     - name: Compile (make)
       run: |
         cd bin
