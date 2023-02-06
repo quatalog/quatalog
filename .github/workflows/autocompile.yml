@@ -1,0 +1,24 @@
+name: Autocompile
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Compile (make)
+      run: make
+    - name: Push compiled binary
+      run: |
+        git config --global user.name "Quatalog Compiler"
+        git config --global user.email "github_actions@quatalog.com"
+        git add CourseOfferingsScraper
+        git commit -m "Recompile scraper : $(date)"
+        git push
