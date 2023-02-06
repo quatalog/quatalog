@@ -6,7 +6,6 @@
 #include<unordered_set>
 #include<json/json.h>
 
-
 namespace fs = std::filesystem;
 struct quatalog_data_t {
         Json::Value terms_offered;

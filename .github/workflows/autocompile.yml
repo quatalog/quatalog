@@ -21,6 +21,6 @@ jobs:
       run: |
         git config --global user.name "Quatalog Compiler"
         git config --global user.email "github_actions@quatalog.com"
-        git add CourseOfferingsScraper
+        git add bin
         git commit -m "Recompile scraper : $(date)"
         git push
