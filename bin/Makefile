@@ -5,7 +5,7 @@ vpath %.cpp ../src
 CourseOfferingsScraper: CourseOfferingsScraper.cpp json.o
 
 json.o: ../3rdparty/jsoncpp/dist/jsoncpp.cpp
-	$(CXX) -c $(CXXFLAGS) $? -o $@
+	if ! test -f "$@"; then $(CXX) -c $(CXXFLAGS) $? -o $@; fi
 
 ../3rdparty/jsoncpp/dist/jsoncpp.cpp:
 	git submodule update --init
