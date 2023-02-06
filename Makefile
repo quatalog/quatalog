@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS = -O2 -march=native -std=c++17 -I./3rdparty/jsoncpp/include
+CXXFLAGS = -O2 -march=native -std=c++17
 
 CourseOfferingsScraper: CourseOfferingsScraper.cpp json.o
 
