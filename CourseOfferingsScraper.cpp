@@ -29,6 +29,7 @@ void handle_multiple_instructors(const std::string&,std::unordered_set<std::stri
 void handle_attributes(const Json::Value&,const std::string&,Json::Value&,Json::Value&);
 void handle_term_attribute(const std::string&,Json::Value&);
 void handle_attribute(const std::string&,Json::Value&,Json::Value&);
+template<typename Functor> void iterateOnDelimitedString(const std::string&,const std::regex&,const Functor&);
 void handle_prereqs(const Json::Value&,const std::string&,Json::Value&,const Json::Value&);
 
 int main(const int argc,
@@ -44,17 +45,19 @@ int main(const int argc,
         }
 
         const auto& data_dir_path = fs::path(argv[1]);
-        const std::string& terms_offered_filename = std::string(argv[2]);
-        const std::string& prerequisites_filename = std::string(argv[3]);
+        const auto& terms_offered_filename = std::string(argv[2]);
+        const auto& prerequisites_filename = std::string(argv[3]);
 
         if(!fs::is_directory(data_dir_path)) {
-                std::cerr << "Data directory argument " << data_dir_path << " is not a directory" << std::endl;
+                std::cerr << "Data directory argument "
+                          << data_dir_path
+                          << " is not a directory" << std::endl;
                 return EXIT_FAILURE;
         }
 
         // Sort term dirs chronologically using a std::set
         std::set<fs::directory_entry> term_dirs;
-        const auto data_dir = fs::directory_iterator(data_dir_path);
+        const auto& data_dir = fs::directory_iterator(data_dir_path);
         for(const auto& term : data_dir) {
                 term_dirs.insert(term);
         }
@@ -77,11 +80,8 @@ int main(const int argc,
 
 void handle_term_dirs(const std::set<fs::directory_entry>& term_dirs,
                       quatalog_data_t& data) {
-        for(auto term : term_dirs) {
-                if(!fs::is_directory(term)) {
-                        continue;
-                }
-
+        for(const auto& term : term_dirs) {
+                if(!fs::is_directory(term)) continue;
                 handle_term(term,data);
         }
 
@@ -90,10 +90,10 @@ void handle_term_dirs(const std::set<fs::directory_entry>& term_dirs,
 void handle_term(const fs::directory_entry& term_entry,
                  quatalog_data_t& quatalog_data) {
         const fs::path dir = term_entry.path();
-        const auto dirname = dir.string();
-        const auto term = dir.stem().string();
-        const auto courses_filename = dirname + "/courses.json";
-        const auto prereqs_filename = dirname + "/prerequisites.json";
+        const auto& dirname = dir.string();
+        const auto& term = dir.stem().string();
+        const auto& courses_filename = dirname + "/courses.json";
+        const auto& prereqs_filename = dirname + "/prerequisites.json";
         std::fstream courses_file{courses_filename,std::ios::in};
         std::fstream prereqs_file{prereqs_filename,std::ios::in};
 
@@ -110,7 +110,7 @@ void handle_term(const fs::directory_entry& term_entry,
         } else {
                 course_handler = handle_course;
         }
-        for(auto& prefix : term_data.courses) {
+        for(const auto& prefix : term_data.courses) {
                 handle_prefix(prefix,term,quatalog_data,term_data,course_handler);
         }
 
@@ -123,15 +123,7 @@ void handle_prefix(const Json::Value& prefix,
                    quatalog_data_t& quatalog_data,
                    const term_data_t& term_data,
                    course_handler_t course_handler) {
-#ifdef DEBUG
-        std::cerr << "\tProcessing prefix "
-                  << prefix["code"]
-                  << " - "
-                  << prefix["name"]
-                  << "..."
-                  << std::endl;
-#endif
-        for(auto& course : prefix["courses"]) {
+        for(const auto& course : prefix["courses"]) {
                 course_handler(course,term,quatalog_data,term_data.prerequisites);
         }
 }
@@ -140,10 +132,8 @@ void handle_course(const Json::Value& course,
                    const std::string& term,
                    quatalog_data_t& data,
                    const Json::Value& term_prereqs) {
-        const auto course_code = course["id"].asString();
-        
+        const auto& course_code = course["id"].asString();
         auto& course_term = data.terms_offered[course_code][term];
-
         const Json::Value& sections = course["sections"];
         handle_everything(sections,course,course_term,data.prerequisites,term_prereqs);
 }
@@ -152,8 +142,6 @@ void handle_course_summer(const Json::Value& course,
                           const std::string& term,
                           quatalog_data_t& data,
                           const Json::Value& term_prereqs) {
-        const auto course_code = course["id"].asString();
-
         // sections[0]: Full term sections
         // sections[1]: First-half term sections
         // sections[2]: Second-half term sections
@@ -169,11 +157,12 @@ void handle_course_summer(const Json::Value& course,
         // loop and the code was a total unreadable
         // mess. So I don't really care
         int subterm;
+        const auto& course_code = course["id"].asString();
         bool subterm0 = false, subterm1 = false, subterm2 = false;
         for(const auto& section : course["sections"]) {
                 const auto& timeslot = section["timeslots"][0];
-                const std::string& dateEnd = timeslot["dateEnd"].asString();
-                const std::string& dateStart = timeslot["dateStart"].asString();
+                const auto& dateEnd = timeslot["dateEnd"].asString();
+                const auto& dateStart = timeslot["dateStart"].asString();
                 subterm = 0;
                 if(dateStart.substr(0,2) != "05") {
                         subterm = 1;
@@ -265,52 +254,31 @@ void handle_instructors(const Json::Value& section,
 
 void handle_multiple_instructors(const std::string& instructor_str,
                                  std::unordered_set<std::string>& instructors) {
-        // Pseudo-string split on commas
-        const auto delim = std::regex(", ?");
-        const auto end_itr = std::sregex_token_iterator();
-        auto instructors_itr = std::sregex_token_iterator(
-                                       instructor_str.begin(),
-                                       instructor_str.end(),
-                                       delim,
-                                       -1
-                               );
-
-        for(;instructors_itr != end_itr
-          && !instructors_itr->str().empty();
-             instructors_itr++) {
-                const std::string& str = instructors_itr->str();
-                if(str == "TBA") continue;
-                instructors.insert(str);
-        }
+        iterateOnDelimitedString(instructor_str,
+                                 std::regex(", ?"),
+                                 [&](const std::string& inst_str) {
+                if(inst_str == "TBA") return;
+                instructors.insert(inst_str);
+        });
 }
 
 void handle_attributes(const Json::Value& section,
                        const std::string& course_id,
                        Json::Value& course_term,
                        Json::Value& out_prereqs) {
-        const auto attributes_str = section["attribute"].asString();
-        // This mess is basically C++'s string split but not using
-        // as much memory as an actual string split
-        const auto delim = std::regex(" and |, ");
-        const auto end_itr = std::sregex_token_iterator();
-        auto attributes_itr = std::sregex_token_iterator(
-                                      attributes_str.begin(),
-                                      attributes_str.end(),
-                                      delim,
-                                      -1
-                              );
-
         // Makes the JSON list of attributes
         Json::Value& term_attributes = course_term["attributes"];
         Json::Value attributes = Json::arrayValue;
         term_attributes = Json::arrayValue;
-        for(;attributes_itr != end_itr
-          && !attributes_itr->str().empty();
-             attributes_itr++) {
-                handle_attribute(attributes_itr->str(),
+
+        iterateOnDelimitedString(section["attribute"].asString(),
+                                 std::regex(" and |, "),
+                                 [&](const std::string& attr_str) {
+                handle_attribute(attr_str,
                                  attributes,
                                  term_attributes);
-        }
+        });
+
         if(!attributes.empty())
                 out_prereqs[course_id]["attributes"] = attributes;
 }
@@ -342,11 +310,26 @@ void handle_term_attribute(const std::string& attribute,
         }
 }
 
+template<typename Functor>
+void iterateOnDelimitedString(const std::string& str,
+                              const std::regex& delim,
+                              const Functor& callback) {
+        // This mess is basically C++'s string split but not using
+        // as much memory as an actual string split
+        const auto end_itr = std::sregex_token_iterator();
+        auto itr = std::sregex_token_iterator(str.begin(),str.end(),delim,-1);
+
+        while(itr != end_itr && !itr->str().empty()) {
+                callback(itr->str());
+                itr++;
+        }
+}
+
 void handle_prereqs(const Json::Value& section,
                     const std::string& course_id,
                     Json::Value& out_data,
                     const Json::Value& term_prereqs) {
-        const std::string& crn = section["crn"].asString();
+        const auto& crn = section["crn"].asString();
         
         const auto& in_obj = term_prereqs[crn];
 
