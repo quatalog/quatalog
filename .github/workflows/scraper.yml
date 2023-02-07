@@ -44,7 +44,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd quatalog-data
-          git config --unset-all http.https://github.com/.extraheader
           git config --global user.name "Quatalog Updater"
           git config --global user.email "github_actions@quatalog.com"
           git add terms_offered.json prerequisites.json terms_list.json catalog.json
