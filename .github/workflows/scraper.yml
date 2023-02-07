@@ -6,6 +6,7 @@ on:
 
 jobs:
   scrape-data:
+    name: Scrape data
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,7 +28,7 @@ jobs:
           repository: quatalog/quatalog-data
           path: quatalog-data
           token: ${{ secrets.PUSH_TOKEN }}
-      
+
       - name: Run scraper
         run: |
           # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
