@@ -1,0 +1,52 @@
+name: Update data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  scrape-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout scraping repo
+        uses: actions/checkout@v3
+        
+      - name: Clone QuACS data
+        uses: actions/checkout@v3
+        with:
+          repository: quacs/quacs-data
+          path: quacs-data
+
+      - name: Clone Quatalog data
+        uses: actions/checkout@v3
+        with:
+          repository: quatalog/quatalog-data
+          path: quatalog-data
+      
+      - name: Run scraper
+        run: |
+          # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
+          ./bin/CourseOfferingScraper \
+            ./quacs-data/semester_data \
+            ./quatalog-data/terms_offered.json \
+            ./quatalog-data/prerequisites.json \
+            ./quatalog-data/terms_list.json
+            
+      - name: Copy `catalog.json` from QuACS data
+        run: |
+          CURRENT_TERM="$(grep terms_list.json -e 'current_term' | cut -f4 -d '"')"
+          cp "./quacs-data/semester_data/$CURRENT_TERM/catalog.json" ./quatalog-data/catalog.json
+          
+      - name: Push new data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd ./quatalog-data
+          git config user.name "Quatalog Updater"
+          git config user.email "github_actions@quatalog.com"
+          git config --unset-all http.https://github.com/.extraheader
+          git add terms_offered.json prerequisites.json terms_list.json catalog.json
+          git commit -m "$(date)" || exit 0
+          git push
+          
+          
