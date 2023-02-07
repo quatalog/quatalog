@@ -5,16 +5,16 @@
 #include<filesystem>
 #include<unordered_set>
 #include<json/json.h>
+#include"common.h"
 
-namespace fs = std::filesystem;
+struct term_data_t {
+        Json::Value courses;
+        Json::Value prerequisites;
+};
 struct quatalog_data_t {
         Json::Value terms_offered;
         Json::Value prerequisites;
         Json::Value list_of_terms;
-};
-struct term_data_t {
-        Json::Value courses;
-        Json::Value prerequisites;
 };
 using course_handler_t = void(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
 
@@ -23,7 +23,7 @@ void handle_term(const fs::directory_entry& term_entry,quatalog_data_t&);
 void handle_prefix(const Json::Value&,const std::string&,quatalog_data_t&,const term_data_t&,course_handler_t*);
 void handle_course(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
 void handle_course_summer(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
-void handle_everything(const Json::Value&,const Json::Value&,Json::Value& course_term,Json::Value&,const Json::Value&);
+void handle_everything(const Json::Value&,const Json::Value&,const std::string&,Json::Value& course_term,Json::Value&,const Json::Value&);
 void handle_sections(const Json::Value&,Json::Value&);
 void handle_instructors(const Json::Value&,std::unordered_set<std::string>&);
 void handle_multiple_instructors(const std::string&,std::unordered_set<std::string>&);
@@ -148,9 +148,9 @@ void handle_course(const Json::Value& course,
                    quatalog_data_t& data,
                    const Json::Value& term_prereqs) {
         const auto& course_code = course["id"].asString();
-        auto& course_term = data.terms_offered[course_code][term];
+        auto& course_terms = data.terms_offered[course_code];
         const Json::Value& sections = course["sections"];
-        handle_everything(sections,course,course_term,data.prerequisites,term_prereqs);
+        handle_everything(sections,course,term,course_terms,data.prerequisites,term_prereqs);
 }
 
 void handle_course_summer(const Json::Value& course,
@@ -196,7 +196,8 @@ void handle_course_summer(const Json::Value& course,
         if(subterm0) {
                 handle_everything(sections[0],
                                   course,
-                                  course_terms[term],
+                                  term,
+                                  course_terms,
                                   data.prerequisites,
                                   term_prereqs);
                 return;
@@ -204,14 +205,16 @@ void handle_course_summer(const Json::Value& course,
         if(subterm1) {
                 handle_everything(sections[1],
                                   course,
-                                  course_terms[term+"02"],
+                                  term+"02",
+                                  course_terms,
                                   data.prerequisites,
                                   term_prereqs);
         }
         if(subterm2) {
                 handle_everything(sections[2],
                                   course,
-                                  course_terms[term+"03"],
+                                  term+"03",
+                                  course_terms,
                                   data.prerequisites,
                                   term_prereqs);
         }
@@ -219,13 +222,17 @@ void handle_course_summer(const Json::Value& course,
 
 void handle_everything(const Json::Value& sections,
                        const Json::Value& course,
-                       Json::Value& course_term,
+                       const std::string& term,
+                       Json::Value& course_terms,
                        Json::Value& out_prereqs,
                        const Json::Value& term_prereqs) {
+        Json::Value& course_term = course_terms[term];
+        const auto& course_id = course["id"].asString();
         course_term["title"] = course["title"];
         handle_sections(sections,course_term);
-        handle_attributes(sections[0],course["id"].asString(),course_term,out_prereqs);
-        handle_prereqs(sections[0],course["id"].asString(),out_prereqs,term_prereqs);
+        course_terms["latest_term"] = term;
+        handle_attributes(sections[0],course_id,course_term,out_prereqs);
+        handle_prereqs(sections[0],course_id,out_prereqs,term_prereqs);
 }
 
 void handle_sections(const Json::Value& sections,
@@ -354,14 +361,7 @@ void handle_prereqs(const Json::Value& section,
         const auto& prerequisites = in_obj["prerequisites"];
         const auto& cross_listings = in_obj["cross_list_courses"];
         
-        // Scraper does not work as intended if we use
-        // a variable instead of repeating out_data[course_id]
-        // This would result in null entries for courses that
-        // have major restrictions or something else like that
-        if(!corequisites.empty())
-                out_data[course_id]["corequisites"] = corequisites;
-        if(!prerequisites.empty())
-                out_data[course_id]["prerequisites"] = prerequisites;
-        if(!cross_listings.empty())
-                out_data[course_id]["cross_listings"] = cross_listings;
+        out_data[course_id]["corequisites"] = corequisites;
+        out_data[course_id]["prerequisites"] = prerequisites;
+        out_data[course_id]["cross_listings"] = cross_listings;
 }
