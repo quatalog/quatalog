@@ -10,6 +10,7 @@ namespace fs = std::filesystem;
 struct quatalog_data_t {
         Json::Value terms_offered;
         Json::Value prerequisites;
+        Json::Value list_of_terms;
 };
 struct term_data_t {
         Json::Value courses;
@@ -40,6 +41,7 @@ int main(const int argc,
                           << " <data_directory>"
                           << " <terms_offered_file>"
                           << " <prerequisites_file>"
+                          << " <list_of_terms_file>"
                           << std::endl;
                 return EXIT_FAILURE;
         }
@@ -47,6 +49,7 @@ int main(const int argc,
         const auto& data_dir_path = fs::path(argv[1]);
         const auto& terms_offered_filename = std::string(argv[2]);
         const auto& prerequisites_filename = std::string(argv[3]);
+        const auto& list_of_terms_filename = std::string(argv[4]);
 
         if(!fs::is_directory(data_dir_path)) {
                 std::cerr << "Data directory argument "
@@ -66,18 +69,21 @@ int main(const int argc,
         quatalog_data_t data;
         handle_term_dirs(term_dirs,data);
 
-        std::fstream  terms_offered_file{terms_offered_filename,std::ios::out};
-        std::fstream  prerequisites_file{prerequisites_filename,std::ios::out};
-        
         Json::StreamWriterBuilder swb;
         swb["indentation"] = "  ";
         std::unique_ptr<Json::StreamWriter> outWriter(swb.newStreamWriter());
+
+        std::fstream terms_offered_file{terms_offered_filename,std::ios::out};
+        std::fstream prerequisites_file{prerequisites_filename,std::ios::out};
+        std::fstream list_of_terms_file{list_of_terms_filename,std::ios::out};
         
         outWriter->write(data.terms_offered,&terms_offered_file);
         outWriter->write(data.prerequisites,&prerequisites_file);
+        outWriter->write(data.list_of_terms,&list_of_terms_file);
         
         terms_offered_file.close();
         prerequisites_file.close();
+        list_of_terms_file.close();
 
         return EXIT_SUCCESS;
 }
@@ -102,7 +108,10 @@ void handle_term(const fs::directory_entry& term_entry,
         std::fstream prereqs_file{prereqs_filename,std::ios::in};
 
         std::cerr << "Processing term " << term << "..." << std::endl;
-        quatalog_data.terms_offered["all_terms"].append(term);
+        quatalog_data.list_of_terms["all_terms"].append(term);
+        // TODO: Once change to QuACS that accounts for prerelease data
+        // is merged, change this
+        quatalog_data.list_of_terms["current_term"] = term;
 
         term_data_t term_data;
         courses_file >> term_data.courses;
@@ -110,6 +119,9 @@ void handle_term(const fs::directory_entry& term_entry,
 
         course_handler_t* course_handler;
         if(term.substr(4,2) == "05") {
+                quatalog_data.list_of_terms["all_terms"].append(term+"02");
+                quatalog_data.list_of_terms["all_terms"].append(term+"03");
+                quatalog_data.list_of_terms["current_term"] = term+"03";
                 course_handler = handle_course_summer;
         } else {
                 course_handler = handle_course;
