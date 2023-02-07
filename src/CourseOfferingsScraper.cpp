@@ -69,8 +69,12 @@ int main(const int argc,
         std::fstream  terms_offered_file{terms_offered_filename,std::ios::out};
         std::fstream  prerequisites_file{prerequisites_filename,std::ios::out};
         
-        terms_offered_file  << data.terms_offered  << std::endl;
-        prerequisites_file  << data.prerequisites  << std::endl;
+        Json::StreamWriterBuilder swb;
+        swb["indentation"] = "  ";
+        std::unique_ptr<Json::StreamWriter> outWriter(swb.newStreamWriter());
+        
+        outWriter->write(data.terms_offered,&terms_offered_file);
+        outWriter->write(data.prerequisites,&prerequisites_file);
         
         terms_offered_file.close();
         prerequisites_file.close();
