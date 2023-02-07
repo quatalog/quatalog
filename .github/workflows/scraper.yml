@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout scraping repo
         uses: actions/checkout@v3
+        with:
+          path: quatalog-scraping
         
       - name: Clone QuACS data
         uses: actions/checkout@v3
@@ -25,8 +27,7 @@ jobs:
       
       - name: Run scraper
         run: |
-          pwd
-          find .
+          cd quatalog-scraping
           # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
           ./bin/CourseOfferingScraper \
             ./quacs-data/semester_data \
