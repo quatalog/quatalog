@@ -25,6 +25,8 @@ jobs:
       
       - name: Run scraper
         run: |
+          pwd
+          find .
           # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
           ./bin/CourseOfferingScraper \
             ./quacs-data/semester_data \
@@ -42,8 +44,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd ./quatalog-data
-          git config user.name "Quatalog Updater"
-          git config user.email "github_actions@quatalog.com"
+          git config --global user.name "Quatalog Updater"
+          git config --global user.email "github_actions@quatalog.com"
           git config --unset-all http.https://github.com/.extraheader
           git add terms_offered.json prerequisites.json terms_list.json catalog.json
           git commit -m "$(date)" || exit 0
