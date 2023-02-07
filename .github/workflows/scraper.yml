@@ -28,6 +28,8 @@ jobs:
       - name: Run scraper
         run: |
           cd quatalog-scraping
+          find .
+          pwd
           # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
           ./bin/CourseOfferingScraper \
             ./quacs-data/semester_data \
