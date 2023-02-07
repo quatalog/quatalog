@@ -35,7 +35,7 @@ void handle_prereqs(const Json::Value&,const std::string&,Json::Value&,const Jso
 
 int main(const int argc,
          const char** argv) {
-        if(argc != 4) {
+        if(argc != 5) {
                 std::cerr << "Bad number of arguments (" << argc << ")" << std::endl;
                 std::cerr << "Usage: " << argv[0]
                           << " <data_directory>"
