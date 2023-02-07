@@ -121,7 +121,6 @@ void handle_term(const fs::directory_entry& term_entry,
         if(term.substr(4,2) == "05") {
                 quatalog_data.list_of_terms["all_terms"].append(term+"02");
                 quatalog_data.list_of_terms["all_terms"].append(term+"03");
-                quatalog_data.list_of_terms["current_term"] = term+"03";
                 course_handler = handle_course_summer;
         } else {
                 course_handler = handle_course;
