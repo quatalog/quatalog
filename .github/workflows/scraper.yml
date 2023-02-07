@@ -36,14 +36,14 @@ jobs:
             
       - name: Copy `catalog.json` from QuACS data
         run: |
-          CURRENT_TERM="$(grep terms_list.json -e 'current_term' | cut -f4 -d '"')"
-          cp "./quacs-data/semester_data/$CURRENT_TERM/catalog.json" ./quatalog-data/catalog.json
+          CURRENT_TERM="$(grep quatalog-data/terms_list.json -e 'current_term' | cut -f4 -d '"')"
+          cp "quacs-data/semester_data/$CURRENT_TERM/catalog.json" quatalog-data/catalog.json
           
       - name: Push new data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd ./quatalog-data
+          cd quatalog-data
           git config --global user.name "Quatalog Updater"
           git config --global user.email "github_actions@quatalog.com"
           git config --unset-all http.https://github.com/.extraheader
