@@ -26,6 +26,7 @@ jobs:
         with:
           repository: quatalog/quatalog-data
           path: quatalog-data
+          token: ${{ secrets.PUSH_TOKEN }}
       
       - name: Run scraper
         run: |
