@@ -67,6 +67,12 @@ int main(const int argc,
 
         // Begin JSON manipulation
         quatalog_data_t data;
+
+        // TODO: Once change to QuACS that accounts for prerelease data
+        // is merged, change this
+        data.list_of_terms["oldest_term"] = term_dirs.begin()->path().stem().string();
+        data.list_of_terms["current_term"] = term_dirs.rbegin()->path().stem().string();
+        
         handle_term_dirs(term_dirs,data);
 
         Json::StreamWriterBuilder swb;
@@ -109,9 +115,6 @@ void handle_term(const fs::directory_entry& term_entry,
 
         std::cerr << "Processing term " << term << "..." << std::endl;
         quatalog_data.list_of_terms["all_terms"].append(term);
-        // TODO: Once change to QuACS that accounts for prerelease data
-        // is merged, change this
-        quatalog_data.list_of_terms["current_term"] = term;
 
         term_data_t term_data;
         courses_file >> term_data.courses;
@@ -147,8 +150,8 @@ void handle_course(const Json::Value& course,
                    const std::string& term,
                    quatalog_data_t& data,
                    const Json::Value& term_prereqs) {
-        std::string course_code = course["id"].asString();
-        auto& course_terms = data.terms_offered[course_code];
+        std::string course_id = course["id"].asString();
+        auto& course_terms = data.terms_offered[course_id];
         const Json::Value& sections = course["sections"];
         handle_everything(sections,course,term,course_terms,data.prerequisites,term_prereqs);
 }
@@ -172,7 +175,7 @@ void handle_course_summer(const Json::Value& course,
         // loop and the code was a total unreadable
         // mess. So I don't really care
         int subterm;
-        const auto& course_code = course["id"].asString();
+        const auto& course_id = course["id"].asString();
         bool subterm0 = false, subterm1 = false, subterm2 = false;
         for(const auto& section : course["sections"]) {
                 const auto& timeslot = section["timeslots"][0];
@@ -191,7 +194,7 @@ void handle_course_summer(const Json::Value& course,
                 sections[subterm].append(section);
         }
 
-        auto& course_terms = data.terms_offered[course_code];
+        auto& course_terms = data.terms_offered[course_id];
         
         if(subterm0) {
                 handle_everything(sections[0],
