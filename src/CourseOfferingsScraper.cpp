@@ -147,7 +147,13 @@ void handle_course(const Json::Value& course,
                    const std::string& term,
                    quatalog_data_t& data,
                    const Json::Value& term_prereqs) {
-        const auto& course_code = course["id"].asString();
+        std::string course_code = course["id"].asString();
+        // Accounts for STSS/STSH merger. Perhaps not a perfect
+        // way to do this, but this makes generating the HTML
+        // much easier
+        if(course_code.substr(0,3) == "STS") {
+                course_code[4] = 'O';
+        }
         auto& course_terms = data.terms_offered[course_code];
         const Json::Value& sections = course["sections"];
         handle_everything(sections,course,term,course_terms,data.prerequisites,term_prereqs);
