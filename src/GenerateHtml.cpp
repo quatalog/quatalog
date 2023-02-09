@@ -12,11 +12,13 @@ struct quatalog_data_t {
 };
 enum struct TAG { BEGIN, END, INLINE };
 bool create_dir_if_not_exist(const fs::path&);
+const Json::Value& get_data(const Json::Value&,std::string);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
+void get_prerequisites(const quatalog_data_t&,std::string);
 std::string get_course_title(const std::string&,const quatalog_data_t&);
 void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
 void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
-void generate_course_pill(const std::string&,const quatalog_data_t&,std::ostream&);
+void generate_course_pill(std::string,const quatalog_data_t&,std::ostream&);
 void generate_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
 void generate_or_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
 void generate_and_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
@@ -80,13 +82,28 @@ bool create_dir_if_not_exist(const fs::path& path) {
         return fs::create_directory(path);
 }
 
+const Json::Value& get_data(const Json::Value& data,
+                            std::string course_id) {
+        if(course_id.substr(0,3) != "STS") {
+                return data[course_id];
+        }
+        const auto& stso = data[course_id];
+        if(stso) return stso;
+        course_id[3] = 'S';
+        const auto& stss = data[course_id]; 
+        if(stss) return stss;
+        course_id[3] = 'H';
+        const auto& stsh = data[course_id];
+        return stsh;
+}
+
 void generate_course_page(const std::string& course_id,
                           const quatalog_data_t& quatalog_data,
                           std::ostream& os) {
         std::string course_name, description;
         const auto& catalog_entry = quatalog_data.catalog[course_id];
-        const auto& prereqs_entry = quatalog_data.prerequisites[course_id];
-        const auto& terms_offered = quatalog_data.terms_offered[course_id];
+        const auto& prereqs_entry = get_data(quatalog_data.prerequisites,course_id);
+        const auto& terms_offered = get_data(quatalog_data.terms_offered,course_id);
         const auto& latest_term = terms_offered["latest_term"].asString();
         const auto& credits = terms_offered[latest_term]["credits"];
         const int credMin = credits["min"].asInt(); 
@@ -151,9 +168,12 @@ std::string get_course_title(const std::string& course_id,
         }
 }
 
-void generate_course_pill(const std::string& course_id,
+void generate_course_pill(std::string course_id,
                           const quatalog_data_t& qlog,
                           std::ostream& os) {
+        if(course_id.substr(0,3) == "STS") {
+                course_id[3] = 'O';
+        }
         const auto& title = get_course_title(course_id,qlog);
         tag(os,TAG::INLINE) << R"R(<a class="course-pill" href=")R" << course_id
                            << R"R(.html">)R"
