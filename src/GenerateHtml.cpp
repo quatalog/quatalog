@@ -16,6 +16,7 @@ const Json::Value& get_data(const Json::Value&,std::string);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
 void get_prerequisites(const quatalog_data_t&,std::string);
 std::string get_course_title(const std::string&,const quatalog_data_t&);
+void generate_attributes(const Json::Value&,std::ostream&);
 void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
 void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
 void generate_course_pill(std::string,const quatalog_data_t&,std::ostream&);
@@ -146,6 +147,7 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::BEGIN,R"(span id="credits-pill" class="attr-pill")");
         tag(os,TAG::INLINE) << credit_string << " " << (credMax == 1 ? "credit" : "credits") << '\n';
         tag(os,TAG::END,"span");
+        generate_attributes(prereqs_entry["attributes"],os);
         tag(os,TAG::END,"div");
         generate_list(prereqs_entry["cross_listings"],"Cross-listed with:","crosslist",quatalog_data,os);
         generate_list(prereqs_entry["corequisites"],"Corequisites:","coreq",quatalog_data,os);
@@ -175,13 +177,22 @@ void generate_course_pill(std::string course_id,
                 course_id[3] = 'O';
         }
         const auto& title = get_course_title(course_id,qlog);
-        tag(os,TAG::INLINE) << R"R(<a class="course-pill" href=")R" << course_id
-                           << R"R(.html">)R"
+        tag(os,TAG::INLINE) << R"(<a class="course-pill" href=")" << course_id
+                           << R"(.html">)"
                            << course_id;
         if(!title.empty()) {
                 os << " " << title;
         }
         os << "</a>";
+}
+
+void generate_attributes(const Json::Value& attributes,
+                         std::ostream& os) {
+        for(const auto& attribute : attributes) {
+                tag(os,TAG::BEGIN,R"(span class="attr-pill")");
+                tag(os,TAG::INLINE) << attribute.asString() << '\n';
+                tag(os,TAG::END,"span");
+        }
 }
 
 void generate_list(const Json::Value& list,
@@ -250,7 +261,7 @@ void generate_and_prereq(const Json::Value& prereqs,
                          std::ostream& os) {
         generate_prereq(prereqs[0],qlog,os);
         for(Json::Value::ArrayIndex i = 1; i != prereqs.size();i++) {
-                tag(os,TAG::INLINE) << R"R(<div class="pr-and">and</div>)R" << '\n';
+                tag(os,TAG::INLINE) << R"(<div class="pr-and">and</div>)" << '\n';
                 generate_prereq(prereqs[i],qlog,os);
         }
 }
