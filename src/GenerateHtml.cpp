@@ -10,10 +10,18 @@ struct quatalog_data_t {
         Json::Value list_of_terms;
         Json::Value catalog;
 };
+enum struct TAG { BEGIN, END, INLINE };
 bool create_dir_if_not_exist(const fs::path&);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
-void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream& os);
 std::string get_course_title(const std::string&,const quatalog_data_t&);
+void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
+void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
+void generate_course_pill(const std::string&,const quatalog_data_t&,std::ostream&);
+void generate_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
+void generate_or_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
+void generate_and_prereq(const Json::Value&,const quatalog_data_t&,std::ostream&);
+std::ostream& indent(std::ostream&,const int);
+std::ostream& tag(std::ostream&,enum TAG,const std::string& = "");
 
 int main(const int argc,
          const char** argv) {
@@ -50,8 +58,11 @@ int main(const int argc,
         list_of_terms_file >> quatalog_data.list_of_terms;
         catalog_file >> quatalog_data.catalog;
 
-        generate_course_page("LGHT-4830",quatalog_data,std::cout);
-        generate_course_page("MATH-4150",quatalog_data,std::cout);
+        for(const auto& course : quatalog_data.catalog.getMemberNames()) {
+                std::cerr << course << std::endl;
+                generate_course_page(course,quatalog_data,std::cout);
+        }
+        //generate_course_page("CSCI-4260",quatalog_data,std::cout);
 }
 
 bool create_dir_if_not_exist(const fs::path& path) {
@@ -98,56 +109,149 @@ void generate_course_page(const std::string& course_id,
                                 "They are often recycled and used for new/experimental courses.";
         }
 
-        os << R"R(<html>
-        <head>
-                <title>)R" << course_id << " - " << course_name << R"R(</title>"
-        </head>
-        <body>
-                <div id="cd-flex">
-                        <div id="course-info-container">
-                                <h1 id="name">)R" << course_name << R"R(</h1>
-                                <h2 id="code">)R" << course_id << R"R(</h2>
-                                <p>)R" << description << R"R(</p>
-                                <div id="cattrs-container">
-                                        <span id="credits-pill" class="attr-pill">
-                                                <span>)R" << credit_string << " " << (credMax == 1 ? "credit" : "credits") << R"R(</span>
-                                        </span>
-                                </div>)R" << '\n';
-                                generate_list(prereqs_entry["cross_listings"],"Cross-listed with:","crosslist",quatalog_data,os);
-                                generate_list(prereqs_entry["corequisites"],"Corequisites:","coreq",quatalog_data,os);
-        os << R"R(                        </div>
-                </div>
-        </body>
-</html>)R" << std::endl;
+        tag(os,TAG::BEGIN,"html");
+        tag(os,TAG::BEGIN,"head");
+        tag(os,TAG::BEGIN,"title");
+        tag(os,TAG::INLINE) << course_id << " - " << course_name << '\n';
+        tag(os,TAG::END,"title");
+        tag(os,TAG::END,"head");
+        tag(os,TAG::BEGIN,"body");
+        tag(os,TAG::BEGIN,R"(div id="cd-flex")");
+        tag(os,TAG::BEGIN,R"(div id="course-info-container")");
+        tag(os,TAG::BEGIN,R"(h1 id="name")");
+        tag(os,TAG::INLINE) << course_name << '\n';
+        tag(os,TAG::END,"h1");
+        tag(os,TAG::INLINE) << R"(<h2 id="code">)" << course_id << "</h2>" << '\n';
+        tag(os,TAG::BEGIN,"p");
+        tag(os,TAG::INLINE) << description << '\n';
+        tag(os,TAG::END,"p");
+        tag(os,TAG::BEGIN,R"(div id="cattrs-container")");
+        tag(os,TAG::BEGIN,R"(span id="credits-pill" class="attr-pill")");
+        tag(os,TAG::INLINE) << credit_string << " " << (credMax == 1 ? "credit" : "credits") << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::END,"div");
+        generate_list(prereqs_entry["cross_listings"],"Cross-listed with:","crosslist",quatalog_data,os);
+        generate_list(prereqs_entry["corequisites"],"Corequisites:","coreq",quatalog_data,os);
+        generate_prereq_display(prereqs_entry["prerequisites"],quatalog_data,os);
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"body");
+        tag(os,TAG::END,"html");
 }
 
-std::string get_course_title(const std::string& course_id,const quatalog_data_t& quatalog_data) {
+std::string get_course_title(const std::string& course_id,
+                             const quatalog_data_t& quatalog_data) {
         const auto& catalog_entry = quatalog_data.catalog[course_id];
         const auto& terms_offered = quatalog_data.terms_offered[course_id];
         const auto& latest_term = terms_offered["latest_term"].asString();
         if(catalog_entry) {
                 return catalog_entry["name"].asString();
         } else {
-                return terms_offered[latest_term]["name"].asString();
+                return terms_offered[latest_term]["title"].asString();
         }
 }
 
-void generate_list(const Json::Value& list,const std::string& list_name,const std::string& css_prefix,const quatalog_data_t& qlog,std::ostream& os) {
-        if(!list.empty()) {
-                os << R"R(                                <div id=")R" << css_prefix << R"R(-container" class="hidden">
-                                        <div id=")R" << css_prefix << R"R(-title" class="rel-info-title">
-                                                )R" << list_name << R"R(
-                                        </div>
-                                        <div id=")R" << css_prefix << R"R(-classes" class="rel-info-courses">)R";
-                for(const auto& cl : list) {
-                                const auto& clstr = cl.asString();
-                                os << R"R(
-                                                <a class="course-pill" href=")R" << clstr
-                                   << R"R(.html">)R" 
-                                   << clstr << " " << get_course_title(clstr,qlog)
-                                   << "</a>\n";
-                }
-                os << "                                        </div>\n";
-                os << "                                </div>\n";
+void generate_course_pill(const std::string& course_id,
+                          const quatalog_data_t& qlog,
+                          std::ostream& os) {
+        const auto& title = get_course_title(course_id,qlog);
+        tag(os,TAG::INLINE) << R"R(<a class="course-pill" href=")R" << course_id
+                           << R"R(.html">)R"
+                           << course_id;
+        if(!title.empty()) {
+                os << " " << title;
         }
+        os << "</a>";
+}
+
+void generate_list(const Json::Value& list,
+                   const std::string& list_name,
+                   const std::string& css_prefix,
+                   const quatalog_data_t& qlog,
+                   std::ostream& os) {
+        if(list.empty()) return;
+        tag(os,TAG::BEGIN,R"(div id=")" + css_prefix + R"(-container")");
+        tag(os,TAG::BEGIN,R"(div id=")" + css_prefix + R"(-title" class="rel-info-title")");
+        tag(os,TAG::INLINE) << list_name << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,"div id=" + css_prefix + R"(-classes" class="rel-info-courses")");
+        for(const auto& cl : list) {
+                generate_course_pill(cl.asString(),qlog,os);
+                os << '\n';
+        }
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
+}
+
+void generate_prereq_display(const Json::Value& prereqs,const quatalog_data_t& qlog,std::ostream& os) {
+        if(prereqs.empty()) return;
+        tag(os,TAG::BEGIN,R"(div id="prereq-container" class="rel-info-container")");
+        tag(os,TAG::BEGIN,R"(div id="prereq-title" class="rel-info-title")");
+        tag(os,TAG::INLINE) << "Prereqs:" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="prereq-classes" class="rel-info-courses")");
+        generate_prereq(prereqs,qlog,os);
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
+}
+
+void generate_prereq(const Json::Value& prereq,
+                     const quatalog_data_t& qlog,
+                     std::ostream& os) {
+        if(prereq["type"] == "course") {
+                std::string course = prereq["course"].asString();
+                course[4] = '-';
+                generate_course_pill(course,qlog,os);
+                os << '\n';
+        } else if(prereq["type"] == "or") {
+                generate_or_prereq(prereq["nested"],qlog,os);
+        } else if(prereq["type"] == "and") {
+                generate_and_prereq(prereq["nested"],qlog,os);
+        }
+}
+
+void generate_or_prereq(const Json::Value& prereqs,
+                        const quatalog_data_t& qlog,
+                        std::ostream& os) {
+        tag(os,TAG::BEGIN,R"(div class="pr-or-con")");
+        tag(os,TAG::BEGIN,R"(div class="pr-or-title")");
+        tag(os,TAG::INLINE) << "one of:" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div class="pr-or")");
+        for(const auto& pr : prereqs) {
+                generate_prereq(pr,qlog,os);
+        }
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
+}
+
+void generate_and_prereq(const Json::Value& prereqs,
+                         const quatalog_data_t& qlog,
+                         std::ostream& os) {
+        generate_prereq(prereqs[0],qlog,os);
+        for(Json::Value::ArrayIndex i = 1; i != prereqs.size();i++) {
+                tag(os,TAG::INLINE) << R"R(<div class="pr-and">and</div>)R" << '\n';
+                generate_prereq(prereqs[i],qlog,os);
+        }
+}
+
+std::ostream& tag(std::ostream& os,enum TAG mode,const std::string& tagname /* = "" */) {
+        static int indent_w = 0;
+        switch(mode) {
+        case TAG::INLINE:
+                return indent(os,indent_w);
+        case TAG::BEGIN:
+                return indent(os,indent_w++) << '<' << tagname << '>' << '\n';
+        case TAG::END:
+                return indent(os,--indent_w) << "</" << tagname << '>' << '\n';
+        }
+}
+
+std::ostream& indent(std::ostream& os,
+                     const int indent_w) {
+        const std::string& INDENT = "        ";
+        for(int i = 0;i < indent_w;i++) {
+                os << INDENT;
+        }
+        return os;
 }
