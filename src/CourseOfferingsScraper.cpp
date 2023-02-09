@@ -183,10 +183,10 @@ void handle_course_summer(const Json::Value& course,
                 const auto& dateStart = timeslot["dateStart"].asString();
                 subterm = 0;
                 if(dateStart.substr(0,2) != "05") {
-                        subterm = 1;
+                        subterm = 2;
                         subterm1 = true;
                 } else if(dateEnd.substr(0,2) != "08") {
-                        subterm = 2;
+                        subterm = 1;
                         subterm2 = true;
                 } else {
                         subterm0 = true;
