@@ -1,6 +1,9 @@
+#include<regex>
 #include<fstream>
 #include<iostream>
 #include<filesystem>
+#include<unordered_set>
+#include<unordered_map>
 #include<json/json.h>
 #include"common.h"
 
@@ -11,11 +14,41 @@ struct quatalog_data_t {
         Json::Value catalog;
 };
 enum struct TAG { BEGIN, END, INLINE };
+enum struct TERM { SPRING, SUMMER, SUMMER2, SUMMER3, FALL, WINTER };
+enum struct OFFERED { YES, NO, DIFF_CODE, UNSCHEDULED };
+const std::unordered_map<enum OFFERED,std::string> offered_to_string {
+        { OFFERED::YES,"offered" },
+        { OFFERED::NO,"not-offered" },
+        { OFFERED::DIFF_CODE,"offered-diff-code" },
+        { OFFERED::UNSCHEDULED,"unscheduled" }
+};
+const std::unordered_map<enum TERM,std::string> term_to_string {
+        { TERM::SPRING,"spring" },
+        { TERM::SUMMER,"summer" },
+        { TERM::SUMMER2,"summer2" },
+        { TERM::SUMMER3,"summer3" },
+        { TERM::FALL,"fall" },
+        { TERM::WINTER,"winter" }
+};
+const std::unordered_map<enum TERM,std::string> term_to_number {
+        { TERM::SPRING,"01" },
+        { TERM::SUMMER,"05" },
+        { TERM::SUMMER2,"0502" },
+        { TERM::SUMMER3,"0503" },
+        { TERM::FALL,"09" },
+        { TERM::WINTER,"12" }
+};
 bool create_dir_if_not_exist(const fs::path&);
 const Json::Value& get_data(const Json::Value&,std::string);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
 void get_prerequisites(const quatalog_data_t&,std::string);
+void generate_opt_container(std::ostream&);
 std::string get_course_title(const std::string&,const quatalog_data_t&);
+void generate_years_table(const Json::Value&,const Json::Value&,const quatalog_data_t&,std::ostream&);
+void generate_year_row(const int,const Json::Value&,const Json::Value&,const quatalog_data_t&,std::ostream&);
+bool is_term_scheduled(const std::string&,const quatalog_data_t&);
+enum OFFERED is_course_offered(const int,const enum TERM,const Json::Value&,const Json::Value&,const quatalog_data_t&);
+void generate_table_cell(const enum TERM,const enum OFFERED,std::ostream&);
 void generate_attributes(const Json::Value&,std::ostream&);
 void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
 void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
@@ -60,12 +93,10 @@ int main(const int argc,
         prerequisites_file >> quatalog_data.prerequisites;
         list_of_terms_file >> quatalog_data.list_of_terms;
         catalog_file >> quatalog_data.catalog;
-
         for(const auto& course : quatalog_data.catalog.getMemberNames()) {
                 std::cerr << course << std::endl;
                 generate_course_page(course,quatalog_data,std::cout);
         }
-        //generate_course_page("CSCI-4260",quatalog_data,std::cout);
 }
 
 bool create_dir_if_not_exist(const fs::path& path) {
@@ -85,6 +116,7 @@ bool create_dir_if_not_exist(const fs::path& path) {
 
 const Json::Value& get_data(const Json::Value& data,
                             std::string course_id) {
+        course_id[4] = '-';
         if(course_id.substr(0,3) != "STS") {
                 return data[course_id];
         }
@@ -127,19 +159,30 @@ void generate_course_page(const std::string& course_id,
                                 "They are often recycled and used for new/experimental courses.";
         }
 
+        const std::regex escape_string(R"(")");
+        const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
+
         tag(os,TAG::BEGIN,"html");
         tag(os,TAG::BEGIN,"head");
         tag(os,TAG::BEGIN,"title");
         tag(os,TAG::INLINE) << course_id << " - " << course_name << '\n';
         tag(os,TAG::END,"title");
+        tag(os,TAG::INLINE) << R"(<meta property="og:title" content=")" << course_id << " - " << course_name << R"(">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::END,"head");
-        tag(os,TAG::BEGIN,"body");
+        tag(os,TAG::BEGIN,R"(body class="search_plugin_added")");
+        tag(os,TAG::BEGIN,R"(div id="qlog-header")");
+	tag(os,TAG::INLINE) << R"(<a id="qlog-wordmark" href="./"><svg><use href="./images/quatalogHWordmark.svg#QuatalogHWordmark"></use></svg></a>)" << '\n';
+	tag(os,TAG::INLINE) << R"R(<input type="text" id="header-search" placeholder="Search..." onkeydown="prepSearch(this, event)">)R" << '\n';
+        tag(os,TAG::END,"div");
         tag(os,TAG::BEGIN,R"(div id="cd-flex")");
         tag(os,TAG::BEGIN,R"(div id="course-info-container")");
         tag(os,TAG::BEGIN,R"(h1 id="name")");
         tag(os,TAG::INLINE) << course_name << '\n';
         tag(os,TAG::END,"h1");
-        tag(os,TAG::INLINE) << R"(<h2 id="code">)" << course_id << "</h2>" << '\n';
+        tag(os,TAG::BEGIN,R"(h2 id="code")");
+        tag(os,TAG::INLINE) << course_id << '\n';
+        tag(os,TAG::END,"h2");
         tag(os,TAG::BEGIN,"p");
         tag(os,TAG::INLINE) << description << '\n';
         tag(os,TAG::END,"p");
@@ -153,9 +196,173 @@ void generate_course_page(const std::string& course_id,
         generate_list(prereqs_entry["corequisites"],"Corequisites:","coreq",quatalog_data,os);
         generate_prereq_display(prereqs_entry["prerequisites"],quatalog_data,os);
         tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="past-container")");
+        tag(os,TAG::BEGIN,R"(h2 id="past-title")");
+        tag(os,TAG::INLINE) << "Past Term Data" << '\n';
+        tag(os,TAG::END,"h2");
+        generate_opt_container(os);
+        generate_years_table(terms_offered,prereqs_entry["cross_listings"],quatalog_data,os);
+        tag(os,TAG::END,"div");
         tag(os,TAG::END,"div");
         tag(os,TAG::END,"body");
         tag(os,TAG::END,"html");
+}
+
+void generate_years_table(const Json::Value& terms_offered,
+                          const Json::Value& cross_listings,
+                          const quatalog_data_t& qlog,
+                          std::ostream& os) {
+        tag(os,TAG::BEGIN,"table");
+        tag(os,TAG::BEGIN,"thead");
+        
+        tag(os,TAG::BEGIN,"tr");
+        tag(os,TAG::INLINE) << "<th></th>" << '\n';
+        tag(os,TAG::INLINE) << R"(<th class="spring season-label">Spring</th>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<th class="summer season-label" colspan="2">Summer</th>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<th class="fall season-label">Fall</th>)" << '\n';
+        //tag(os,TAG::INLINE) << R"(<th class="winter season-label">Enrichment</th>)" << '\n';
+        tag(os,TAG::END,"tr");
+        tag(os,TAG::BEGIN,"tr");
+        tag(os,TAG::INLINE) << R"(<th colspan="2"></th>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<th class="summer2 midsum-label">(Session 1)</th>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<th class="summer3 midsum-label">(Session 2)</th>)" << '\n';
+        //tag(os,TAG::INLINE) << R"(<th colspan="2"></th>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<th></th>)" << '\n';
+        tag(os,TAG::END,"tr");
+
+        tag(os,TAG::END,"thead");
+        tag(os,TAG::BEGIN,"tbody");
+
+        const int current_year = std::stoi(qlog.list_of_terms["current_term"].asString().substr(0,4));
+        const int oldest_year = std::stoi(qlog.list_of_terms["oldest_term"].asString().substr(0,4));
+        for(int year = current_year;year >= oldest_year;year--) {
+                generate_year_row(year,terms_offered,cross_listings,qlog,os);
+        }
+
+        tag(os,TAG::END,"tbody");
+        tag(os,TAG::END,"table");
+}
+
+void generate_year_row(const int year,
+                       const Json::Value& terms_offered,
+                       const Json::Value& cross_listings,
+                       const quatalog_data_t& qlog,
+                       std::ostream& os) {
+        tag(os,TAG::BEGIN,"tr");
+        tag(os,TAG::INLINE) << R"(<th class="year">)" << year << "</th>" << '\n';
+
+        generate_table_cell(TERM::SPRING,is_course_offered(year,TERM::SPRING,terms_offered,cross_listings,qlog),os);
+        
+        const enum OFFERED summer1 = is_course_offered(year,TERM::SUMMER,terms_offered,cross_listings,qlog);
+        if(summer1 != OFFERED::NO) {
+                generate_table_cell(TERM::SUMMER,summer1,os);
+        } else {
+                const enum OFFERED summer2 = is_course_offered(year,TERM::SUMMER2,terms_offered,cross_listings,qlog);
+                const enum OFFERED summer3 = is_course_offered(year,TERM::SUMMER3,terms_offered,cross_listings,qlog);
+                if((summer2 == OFFERED::NO || summer2 == OFFERED::UNSCHEDULED)
+                && (summer3 == OFFERED::NO || summer3 == OFFERED::UNSCHEDULED)) {
+                        generate_table_cell(TERM::SUMMER,summer1,os);
+                } else {
+                        generate_table_cell(TERM::SUMMER2,summer2,os);
+                        generate_table_cell(TERM::SUMMER3,summer3,os);
+                }
+        }
+
+        generate_table_cell(TERM::FALL,is_course_offered(year,TERM::FALL,terms_offered,cross_listings,qlog),os);
+        //generate_table_cell(TERM::WINTER,is_course_offered(year,TERM::WINTER,terms_offered,cross_listings,qlog),os);
+
+        tag(os,TAG::END,"tr");
+}
+
+void generate_table_cell(const enum TERM term,
+                         const enum OFFERED is_offered,
+                         std::ostream& os) {
+	tag(os,TAG::INLINE) << R"(<td )";
+        if(term == TERM::SUMMER) {
+                os << R"(colspan="2" )";
+        }
+        os << R"(class="term )"
+                << term_to_string.at(term) << ' '
+                << offered_to_string.at(is_offered) 
+                << R"(">)" << '\n';
+}
+
+bool is_term_scheduled(const std::string& term_str,
+                       const quatalog_data_t& qlog) {
+        static std::unordered_set<std::string> terms;
+        if(terms.empty()) {
+                for(const auto& term : qlog.list_of_terms["all_terms"]) {
+                        terms.insert(term.asString());
+                }
+        }
+        return terms.count(term_str);
+}
+
+enum OFFERED is_course_offered(const int year,
+                               const enum TERM term,
+                               const Json::Value& terms_offered,
+                               const Json::Value& cross_listings,
+                               const quatalog_data_t& qlog) {
+        const std::string& term_str = std::to_string(year) + term_to_number.at(term);  
+        if(!is_term_scheduled(term_str,qlog)) {
+                return OFFERED::UNSCHEDULED;
+        } else if(terms_offered.isMember(term_str)) {
+                return OFFERED::YES;
+        } else {
+                for(const auto& cl : cross_listings) {
+                        if(get_data(terms_offered,cl.asString())) {
+                                return OFFERED::DIFF_CODE;
+                        }
+                }
+                return OFFERED::NO;
+        }
+}
+
+void generate_opt_container(std::ostream& os) {
+        tag(os,TAG::BEGIN,R"(div id="opt-container")");
+        tag(os,TAG::BEGIN,R"(div id="key-panel")");
+        tag(os,TAG::BEGIN,R"(div id="yes-code" class="key-code")");
+        tag(os,TAG::BEGIN,R"(span class="code-icon" id="yes-code-icon")");
+        tag(os,TAG::INLINE) << R"(<svg><use href="./icons.svg#circle-check"></use></svg>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "Offered" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="no-code" class="key-code")");
+        tag(os,TAG::BEGIN,R"(span class="code-icon" id="no-code-icon")");
+        tag(os,TAG::INLINE) << R"(<svg><use href="./icons.svg#circle-no"></use></svg>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "Not Offered" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="diff-code" class="key-code")");
+        tag(os,TAG::BEGIN,R"(span class="code-icon" id="diff-code-icon")");
+        tag(os,TAG::INLINE) << R"(<svg><use href="./icons.svg#circle-question"></use></svg>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "Offered as Cross-Listing Only" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="nil-code" class="key-code")");
+        tag(os,TAG::BEGIN,R"(span class="code-icon" id="nil-code-icon")");
+        tag(os,TAG::INLINE) << R"(<svg><use href="./icons.svg#circle-empty"></use></svg>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "No Term Data" << '\n';
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
+        tag(os,TAG::BEGIN,R"(div id="control-panel")");
+        tag(os,TAG::BEGIN,R"(label for="simple-view-input" id="simple-view-label" class="view-option-label")");
+        tag(os,TAG::BEGIN,R"(span class="view-icon" id="simple-view-icon")");
+        tag(os,TAG::INLINE) << R"(<span class="view-icon-selected"><svg><use href="./icons.svg#circle-dot"></use></svg></span>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<span class="view-icon-unselected"><svg><use href="./icons.svg#circle-empty"></use></svg></span>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "Simple View" << '\n';
+        tag(os,TAG::END,"label");
+        tag(os,TAG::BEGIN,R"(label for="detail-view-input" id="detail-view-label" class="view-option-label")");
+        tag(os,TAG::BEGIN,R"(span class="view-icon" id="detail-view-icon")");
+        tag(os,TAG::INLINE) << R"(<span class="view-icon-selected"><svg><use href="./icons.svg#circle-dot"></use></svg></span>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<span class="view-icon-unselected"><svg><use href="./icons.svg#circle-empty"></use></svg></span>)" << '\n';
+        tag(os,TAG::END,"span");
+        tag(os,TAG::INLINE) << "Detailed View" << '\n';
+        tag(os,TAG::END,"label");
+        tag(os,TAG::END,"div");
+        tag(os,TAG::END,"div");
 }
 
 std::string get_course_title(const std::string& course_id,
@@ -215,7 +422,6 @@ void generate_list(const Json::Value& list,
 }
 
 void generate_prereq_display(const Json::Value& prereqs,const quatalog_data_t& qlog,std::ostream& os) {
-        if(prereqs.empty()) return;
         tag(os,TAG::BEGIN,R"(div id="prereq-container" class="rel-info-container")");
         tag(os,TAG::BEGIN,R"(div id="prereq-title" class="rel-info-title")");
         tag(os,TAG::INLINE) << "Prereqs:" << '\n';
@@ -229,9 +435,12 @@ void generate_prereq_display(const Json::Value& prereqs,const quatalog_data_t& q
 void generate_prereq(const Json::Value& prereq,
                      const quatalog_data_t& qlog,
                      std::ostream& os) {
-        if(prereq["type"] == "course") {
+        if(prereq.empty()) {
+                tag(os,TAG::BEGIN,R"(span class="none-rect")");
+                tag(os,TAG::INLINE) << "none" << '\n';
+                tag(os,TAG::END,"span");
+        } else if(prereq["type"] == "course") {
                 std::string course = prereq["course"].asString();
-                course[4] = '-';
                 generate_course_pill(course,qlog,os);
                 os << '\n';
         } else if(prereq["type"] == "or") {
