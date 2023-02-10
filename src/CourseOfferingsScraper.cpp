@@ -5,7 +5,7 @@
 #include<filesystem>
 #include<unordered_set>
 #include<json/json.h>
-#include"common.h"
+namespace fs = std::filesystem;
 
 struct term_data_t {
         Json::Value courses;
