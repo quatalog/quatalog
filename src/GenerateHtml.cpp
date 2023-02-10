@@ -201,7 +201,9 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::BEGIN,R"(body class="search_plugin_added")");
         tag(os,TAG::BEGIN,R"(div id="qlog-header")");
         tag(os,TAG::INLINE) << R"(<a id="qlog-wordmark" href="../"><svg><use href="../images/quatalogHWordmark.svg#QuatalogHWordmark"></use></svg></a>)" << '\n';
-        tag(os,TAG::INLINE) << R"R(<input type="text" id="header-search" placeholder="Search..." onkeydown="prepSearch(this, event)">)R" << '\n';
+        tag(os,TAG::BEGIN,R"R(form onsubmit="search_helper()")R";
+        tag(os,TAG::INLINE) << R"(<input type="text" id="search" class="header-search" placeholder="Search...">)" << '\n';
+        tag(os,TAG::END,"form");
         tag(os,TAG::END,"div");
         tag(os,TAG::BEGIN,R"(div id="cd-flex")");
         tag(os,TAG::BEGIN,R"(div id="course-info-container")");
@@ -248,7 +250,7 @@ void generate_years_table(const Json::Value& terms_offered,
                           const Json::Value& cross_listings,
                           const quatalog_data_t& qlog,
                           std::ostream& os) {
-        tag(os,TAG::BEGIN,"table");
+        tag(os,TAG::BEGIN,R"(table id="years-table")");
         tag(os,TAG::BEGIN,"thead");
 
         tag(os,TAG::BEGIN,"tr");
