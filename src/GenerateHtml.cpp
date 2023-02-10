@@ -188,6 +188,7 @@ void generate_course_page(const std::string& course_id,
         const std::regex escape_string(R"(")");
         const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
 
+        tag(os,TAG::INLINE) << "<!DOCTYPE html>" << '\n';
         tag(os,TAG::BEGIN,"html");
         tag(os,TAG::BEGIN,"head");
         tag(os,TAG::BEGIN,"title");
