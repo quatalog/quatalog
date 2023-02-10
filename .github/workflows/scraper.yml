@@ -20,57 +20,48 @@ jobs:
           repository: quacs/quacs-data
           path: quacs-data
 
+      - name: Run scraper
+        run: |
+          # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
+          mkdir temp-quatalog-data
+          quatalog-scraping/bin/CourseOfferingsScraper \
+            quacs-data/semester_data \
+            temp-quatalog-data/terms_offered.json \
+            temp-quatalog-data/prerequisites.json \
+            temp-quatalog-data/terms_list.json
+            
+      - name: Copy catalog.json from QuACS data
+        run: |
+          CURRENT_TERM="$(grep temp-quatalog-data/terms_list.json -e 'current_term' | cut -f4 -d '"')"
+          rsync -avz "quacs-data/semester_data/$CURRENT_TERM/catalog.json" temp-quatalog-data/catalog.json
+          
+      - name: Upload data to artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: quatalog-data
+          path: temp-quatalog-data/
+
+  push-new-data:
+    name: Push new data to data repo
+    runs-on: ubuntu-latest
+    needs: [scrape-data]
+    steps:
       - name: Clone Quatalog data
         uses: actions/checkout@v3
         with:
           repository: quatalog/data
           path: quatalog-data
           token: ${{ secrets.PUSH_TOKEN }}
-
-      - name: Run scraper
-        run: |
-          # Usage: CourseOfferingsScraper <data_directory> <terms_offered_file> <prerequisites_file> <list_of_terms_file>
-          quatalog-scraping/bin/CourseOfferingsScraper \
-            quacs-data/semester_data \
-            quatalog-data/terms_offered.json \
-            quatalog-data/prerequisites.json \
-            quatalog-data/terms_list.json
-            
-      - name: Copy catalog.json from QuACS data
-        run: |
-          CURRENT_TERM="$(grep quatalog-data/terms_list.json -e 'current_term' | cut -f4 -d '"')"
-          rsync -avz "quacs-data/semester_data/$CURRENT_TERM/catalog.json" quatalog-data/catalog.json
-          
-      - name: List files
-        run: |
-          ls -lsaR .
-          
-      - name: Upload data to artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: quatalog-data
-          path: quatalog-data/
-
-
-#  generate-site:
-#    runs-on: ubuntu-latest
-#    needs: [scrape-data]
-#    steps:
-#      - name: Checkout scraping repo
-#        uses: actions/checkout@v3
-#        with:
-#          path: quatalog-scraping
-          
-  push-new-data:
-    name: Push new data to data repo
-    runs-on: ubuntu-latest
-    needs: [scrape-data]
-    steps:
+    
       - name: Download data from artifact
         uses: actions/download-artifact@v3
         with:
           name: quatalog-data
-          path: quatalog-data
+          path: temp-quatalog-data
+      
+      - name: Copy data to repo directory
+        run: |
+          rsync -avz temp-quatalog-data/ quatalog-data/
           
       - name: Push new data
         working-directory: ./quatalog-data
