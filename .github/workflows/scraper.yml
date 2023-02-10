@@ -1,4 +1,4 @@
-name: Update data and generate static site
+name: Update data, generate static site, and deploy to Pages
 on:
   workflow_dispatch:
   schedule:
@@ -140,7 +140,7 @@ jobs:
           ref: static-generated
           
       - name: Setup Pages
-        uses: actions/configure-pages@v3.0.2
+        uses: actions/configure-pages@v3
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
