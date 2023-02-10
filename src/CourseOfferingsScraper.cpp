@@ -184,10 +184,10 @@ void handle_course_summer(const Json::Value& course,
                 subterm = 0;
                 if(dateStart.substr(0,2) != "05") {
                         subterm = 2;
-                        subterm1 = true;
+                        subterm2 = true;
                 } else if(dateEnd.substr(0,2) != "08") {
                         subterm = 1;
-                        subterm2 = true;
+                        subterm1 = true;
                 } else {
                         subterm0 = true;
                 }
