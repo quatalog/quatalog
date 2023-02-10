@@ -1,4 +1,4 @@
-name: Update data
+name: Update data and generate static site
 on:
   workflow_dispatch:
   schedule:
