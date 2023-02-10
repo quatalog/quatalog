@@ -12,7 +12,6 @@ struct quatalog_data_t {
         Json::Value prerequisites;
         Json::Value list_of_terms;
         Json::Value catalog;
-        Json::Value searchable_catalog;
 };
 enum struct TAG { BEGIN, END, INLINE, COMPLEX_BEGIN };
 enum struct TERM { SPRING, SUMMER, SUMMER2, SUMMER3, FALL, WINTER };
@@ -43,7 +42,7 @@ std::unordered_set<std::string> get_all_courses(const quatalog_data_t&);
 std::string fix_course_ids(std::string);
 bool create_dir_if_not_exist(const fs::path&);
 Json::Value get_data(const Json::Value&,std::string);
-void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
+void generate_course_page(const std::string&,const quatalog_data_t&,Json::Value&,std::ostream&);
 void get_prerequisites(const quatalog_data_t&,std::string);
 void generate_opt_container(std::ostream&);
 std::string generate_credit_string(const Json::Value& credits);
@@ -101,10 +100,11 @@ int main(const int argc,
         catalog_file >> quatalog_data.catalog;
 
         auto courses = get_all_courses(quatalog_data);
+        Json::Value searchable_catalog;
         for(const auto& course : courses) {
                 const auto& html_path = out_dir_path / (course + ".html");
                 auto file = std::ofstream(html_path);
-                generate_course_page(course,quatalog_data,file);
+                generate_course_page(course,quatalog_data,searchable_catalog,file);
                 file.close();
         }
 
@@ -113,7 +113,7 @@ int main(const int argc,
         std::unique_ptr<Json::StreamWriter> outWriter(swb.newStreamWriter());
 
         std::fstream searchable_catalog_file{searchable_catalog_filename,std::ios::out};
-        outWriter->write(quatalog_data.searchable_catalog,&searchable_catalog_file);
+        outWriter->write(searchable_catalog,&searchable_catalog_file);
 
         searchable_catalog_file.close();
 }
@@ -182,6 +182,7 @@ Json::Value get_data(const Json::Value& data,
 
 void generate_course_page(const std::string& course_id,
                           const quatalog_data_t& quatalog_data,
+                          Json::Value& searchable_catalog,
                           std::ostream& os) {
         std::cerr << "Generating course page for " << course_id << "..." << std::endl;
         std::string course_name = get_course_title(course_id,quatalog_data);
@@ -204,15 +205,16 @@ void generate_course_page(const std::string& course_id,
         const auto& mid_digits = course_id.substr(6,2);
         if(mid_digits == "96" || mid_digits == "97") {
                 course_name = "Topics in " + course_id.substr(0,4);
-                description = "Course codes between X960 and X979 are for topics courses. "
-                                "They are often recycled and used for new/experimental courses.";
+                description = "Course codes between X960 and X979 are for topics "
+                                "courses. They are often recycled and used for new "
+                                "or experimental courses.";
         }
 
         Json::Value searchable_catalog_entry;
         searchable_catalog_entry["code"] = course_id;
         searchable_catalog_entry["name"] = course_name;
         searchable_catalog_entry["description"] = description;
-        quatalog_data.searchable_catalog.append(searchable_catalog_entry);
+        searchable_catalog.append(searchable_catalog_entry);
 
         const std::regex escape_string(R"(")");
         const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
