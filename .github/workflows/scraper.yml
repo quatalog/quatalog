@@ -99,7 +99,7 @@ jobs:
       - name: Run the HTML generator
         run: |
           # Usage: GenerateHtml <terms_offered_file> <prerequisites_file> <list_of_terms_file> <catalog_file> <out_directory>
-          quatalog-scraping/bin/HtmlGenerator \
+          quatalog-scraping/bin/GenerateHtml \
             new-data/terms_offered.json \
             new-data/prerequisites.json \
             new-data/terms_list.json \
