@@ -98,17 +98,19 @@ jobs:
           
       - name: Run the HTML generator
         run: |
-          # Usage: GenerateHtml <terms_offered_file> <prerequisites_file> <list_of_terms_file> <catalog_file> <out_directory>
+          # Usage: GenerateHtml <terms_offered_file> <prerequisites_file> <list_of_terms_file> <catalog_file> <out_directory> <searchable_catalog_file>
           quatalog-scraping/bin/GenerateHtml \
             new-data/terms_offered.json \
             new-data/prerequisites.json \
             new-data/terms_list.json \
             new-data/catalog.json \
-            courses/
+            courses/ \
+            searchable_catalog.json
             
       - name: Merge data
         run: |
           rsync -avz courses/ quatalog-site/courses/
+          rsync -avz searachable_catalog.json quatalog-site/searchable_catalog.json
         
       - name: Push generated HTML
         working-directory: quatalog-site
@@ -145,7 +147,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: '.'
+          path: |
+            .
+            !LICENSE
+            !README.md
 
       - name: Deploy to GitHub Pages
         id: deployment

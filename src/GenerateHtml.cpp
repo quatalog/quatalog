@@ -42,7 +42,7 @@ const std::unordered_map<enum TERM,std::string> term_to_number {
 std::unordered_set<std::string> get_all_courses(const quatalog_data_t&);
 std::string fix_course_ids(std::string);
 bool create_dir_if_not_exist(const fs::path&);
-const Json::Value& get_data(const Json::Value&,std::string);
+Json::Value get_data(const Json::Value&,std::string);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
 void get_prerequisites(const quatalog_data_t&,std::string);
 void generate_opt_container(std::ostream&);
@@ -65,7 +65,7 @@ std::ostream& tag(std::ostream&,enum TAG,const std::string& = "");
 
 int main(const int argc,
          const char** argv) {
-        if(argc != 6) {
+        if(argc != 7) {
                 std::cerr << "Bad number of arguments (" << argc << ")" << std::endl;
                 std::cerr << "Usage: " << argv[0]
                         << " <terms_offered_file>"
@@ -73,6 +73,7 @@ int main(const int argc,
                         << " <list_of_terms_file>"
                         << " <catalog_file>"
                         << " <out_directory>"
+                        << " <searchable_catalog_file>"
                         << std::endl;
                 return EXIT_FAILURE;
         }
@@ -81,6 +82,7 @@ int main(const int argc,
         const auto& list_of_terms_filename = std::string(argv[3]);
         const auto& catalog_filename = std::string(argv[4]);
         const auto& out_dir_path = fs::path(argv[5]);
+        const auto& searchable_catalog_filename = fs::path(argv[6]);
 
         if(!create_dir_if_not_exist(out_dir_path)) {
                 std::cerr << "What" << std::endl;
@@ -103,7 +105,17 @@ int main(const int argc,
                 const auto& html_path = out_dir_path / (course + ".html");
                 auto file = std::ofstream(html_path);
                 generate_course_page(course,quatalog_data,file);
+                file.close();
         }
+
+        Json::StreamWriterBuilder swb;
+        swb["indentation"] = "  ";
+        std::unique_ptr<Json::StreamWriter> outWriter(swb.newStreamWriter());
+
+        std::fstream searchable_catalog_file{searchable_catalog_filename,std::ios::out};
+        outWriter->write(quatalog_data.searchable_catalog,&searchable_catalog_file);
+
+        searchable_catalog_file.close();
 }
 
 std::unordered_set<std::string> get_all_courses(const quatalog_data_t& qlog) {
@@ -196,7 +208,11 @@ void generate_course_page(const std::string& course_id,
                                 "They are often recycled and used for new/experimental courses.";
         }
 
-        quatalog_data.searchable_catalog[]
+        Json::Value searchable_catalog_entry;
+        searchable_catalog_entry["code"] = course_id;
+        searchable_catalog_entry["name"] = course_name;
+        searchable_catalog_entry["description"] = description;
+        quatalog_data.searchable_catalog.append(searchable_catalog_entry);
 
         const std::regex escape_string(R"(")");
         const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
@@ -205,9 +221,9 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::BEGIN,"html");
         tag(os,TAG::BEGIN,"head");
         tag(os,TAG::BEGIN,"title");
-        tag(os,TAG::INLINE) << course_id << " - " << course_name << '\n';
+        tag(os,TAG::INLINE) << course_id << ": " << course_name << '\n';
         tag(os,TAG::END,"title");
-        tag(os,TAG::INLINE) << R"(<meta property="og:title" content=")" << course_id << " - " << course_name << R"(">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<meta property="og:title" content=")" << course_id << ": " << course_name << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
