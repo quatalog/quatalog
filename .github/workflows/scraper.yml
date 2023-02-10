@@ -41,6 +41,10 @@ jobs:
           CURRENT_TERM="$(grep quatalog-data/terms_list.json -e 'current_term' | cut -f4 -d '"')"
           rsync -avz "quacs-data/semester_data/$CURRENT_TERM/catalog.json" quatalog-data/catalog.json
           
+      - name: List files
+        run: |
+          ls -lsa quatalog-data
+          
       - name: Upload data to artifact
         uses: actions/upload-artifact@v3
         with:
