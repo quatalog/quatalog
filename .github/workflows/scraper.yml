@@ -110,7 +110,7 @@ jobs:
       - name: Merge data
         run: |
           rsync -avz courses/ quatalog-site/courses/
-          rsync -avz searachable_catalog.json quatalog-site/searchable_catalog.json
+          rsync -avz searchable_catalog.json quatalog-site/searchable_catalog.json
         
       - name: Push generated HTML
         working-directory: quatalog-site
@@ -145,7 +145,7 @@ jobs:
         uses: actions/configure-pages@v3
         
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: |
             .
