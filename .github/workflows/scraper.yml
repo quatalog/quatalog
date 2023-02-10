@@ -137,16 +137,14 @@ jobs:
         
       - name: Archive github-pages artifact
         run: |
-          find . -not -path '*/.*'
           tar \
             --dereference --hard-dereference \
-            --directory . \
-            -cvf "$RUNNER_TEMP/artifact.tar"
+            -cf "$RUNNER_TEMP/artifact.tar"
             --exclude=.git \
             --exclude=.github \
             --exclude=LICENSE \
             --exclude=README.md \
-            .
+            "./"
 
       - name: Upload github-pages artifact
         uses: actions/upload-artifact@v3
