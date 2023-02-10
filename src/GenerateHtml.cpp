@@ -5,7 +5,7 @@
 #include<unordered_set>
 #include<unordered_map>
 #include<json/json.h>
-#include"common.h"
+namespace fs = std::filesystem;
 
 struct quatalog_data_t {
         Json::Value terms_offered;
@@ -38,6 +38,8 @@ const std::unordered_map<enum TERM,std::string> term_to_number {
         { TERM::FALL,"09" },
         { TERM::WINTER,"12" }
 };
+std::unordered_set<std::string> get_all_courses(const quatalog_data_t&);
+std::string fix_course_ids(std::string);
 bool create_dir_if_not_exist(const fs::path&);
 const Json::Value& get_data(const Json::Value&,std::string);
 void generate_course_page(const std::string&,const quatalog_data_t&,std::ostream&);
@@ -94,10 +96,33 @@ int main(const int argc,
         prerequisites_file >> quatalog_data.prerequisites;
         list_of_terms_file >> quatalog_data.list_of_terms;
         catalog_file >> quatalog_data.catalog;
-        for(const auto& course : quatalog_data.catalog.getMemberNames()) {
-                std::cerr << course << std::endl;
-                generate_course_page(course,quatalog_data,std::cout);
+
+        auto courses = get_all_courses(quatalog_data);
+        for(const auto& course : courses) {
+                const auto& html_path = out_dir_path / (course + ".html");
+                auto file = std::ofstream(html_path);
+                generate_course_page(course,quatalog_data,file);
         }
+}
+
+std::unordered_set<std::string> get_all_courses(const quatalog_data_t& qlog) {
+        std::unordered_set<std::string> output;
+        for(const std::string& course : qlog.catalog.getMemberNames()) {
+                if(course.length() != 9) continue; 
+                output.insert(fix_course_ids(course));
+        }
+        for(const std::string& course : qlog.terms_offered.getMemberNames()) {
+                output.insert(fix_course_ids(course));
+        }
+        return output;
+}
+
+std::string fix_course_ids(std::string course) {
+        course[4] = '-';
+        if(course.substr(0,3) == "STS") {
+                course[3] = 'O';
+        }
+        return course;
 }
 
 bool create_dir_if_not_exist(const fs::path& path) {
@@ -134,6 +159,7 @@ const Json::Value& get_data(const Json::Value& data,
 void generate_course_page(const std::string& course_id,
                           const quatalog_data_t& quatalog_data,
                           std::ostream& os) {
+        std::cerr << "Generating course page for " << course_id << "..." << std::endl;
         std::string course_name, description;
         const auto& catalog_entry = quatalog_data.catalog[course_id];
         const auto& prereqs_entry = get_data(quatalog_data.prerequisites,course_id);
@@ -147,9 +173,10 @@ void generate_course_page(const std::string& course_id,
                 description = catalog_entry["description"].asString();
         } else {
                 course_name = terms_offered[latest_term]["name"].asString();
-                description = "This course is not in the most recent catalog."
-                                "It may have been discontinued, or had its course "
-                                "code changed.";
+                description = "This course is not in the most recent catalog. "
+                                "It may have been discontinued, had its course "
+                                "code changed, or just not be in the catalog for "
+                                "some other reason.";
         }
         const auto& mid_digits = course_id.substr(6,2);
         if(mid_digits == "96" || mid_digits == "97") {
