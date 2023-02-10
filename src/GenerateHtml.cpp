@@ -229,8 +229,8 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<script src="../js/fuse.js">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<script src="../js/search_helper.js">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<script src="../js/fuse.js"></script>)" << '\n';
+        tag(os,TAG::INLINE) << R"(<script src="../js/search_helper.js"></script>)" << '\n';
         tag(os,TAG::END,"head");
         tag(os,TAG::BEGIN,R"(body class="search_plugin_added")");
         tag(os,TAG::BEGIN,R"(div id="qlog-header")");
