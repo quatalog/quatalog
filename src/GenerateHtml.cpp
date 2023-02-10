@@ -160,7 +160,8 @@ void generate_course_page(const std::string& course_id,
                           const quatalog_data_t& quatalog_data,
                           std::ostream& os) {
         std::cerr << "Generating course page for " << course_id << "..." << std::endl;
-        std::string course_name, description;
+        std::string course_name = get_course_title(course_id,quatalog_data);
+        std::string description;
         const auto& catalog_entry = quatalog_data.catalog[course_id];
         const auto& prereqs_entry = get_data(quatalog_data.prerequisites,course_id);
         const auto& terms_offered = get_data(quatalog_data.terms_offered,course_id);
@@ -169,10 +170,8 @@ void generate_course_page(const std::string& course_id,
         const auto& credit_string = generate_credit_string(credits);
 
         if(catalog_entry) {
-                course_name = catalog_entry["name"].asString();
                 description = catalog_entry["description"].asString();
         } else {
-                course_name = terms_offered[latest_term]["name"].asString();
                 description = "This course is not in the most recent catalog. "
                                 "It may have been discontinued, had its course "
                                 "code changed, or just not be in the catalog for "
