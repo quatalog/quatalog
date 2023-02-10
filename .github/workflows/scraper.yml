@@ -43,7 +43,7 @@ jobs:
           
       - name: List files
         run: |
-          ls -lsa quatalog-data
+          ls -lsaR .
           
       - name: Upload data to artifact
         uses: actions/upload-artifact@v3
