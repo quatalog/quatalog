@@ -8,8 +8,6 @@ jobs:
   scrape-data:
     name: Scrape data
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout scraping repo
         uses: actions/checkout@v3
@@ -43,6 +41,32 @@ jobs:
           CURRENT_TERM="$(grep quatalog-data/terms_list.json -e 'current_term' | cut -f4 -d '"')"
           rsync -avz "quacs-data/semester_data/$CURRENT_TERM/catalog.json" quatalog-data/catalog.json
           
+      - name: Upload data to artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: quatalog-data
+          path: quatalog-data/
+
+
+#  generate-site:
+#    runs-on: ubuntu-latest
+#    needs: [scrape-data]
+#    steps:
+#      - name: Checkout scraping repo
+#        uses: actions/checkout@v3
+#        with:
+#          path: quatalog-scraping
+          
+  push-new-data:
+    runs-on: ubuntu-latest
+    needs: [scrape-data]
+    steps:
+      - name: Download data from artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: quatalog-data
+          path: quatalog-data
+          
       - name: Push new data
         working-directory: ./quatalog-data
         run: |
@@ -51,5 +75,3 @@ jobs:
           git add terms_offered.json prerequisites.json terms_list.json catalog.json
           git commit -m "$(date)" || exit 0
           git push
-          
-          
