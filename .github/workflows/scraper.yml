@@ -139,11 +139,11 @@ jobs:
         run: |
           tar \
             --dereference --hard-dereference \
-            -cf "$RUNNER_TEMP/artifact.tar"
             --exclude=.git \
             --exclude=.github \
             --exclude=LICENSE \
             --exclude=README.md \
+            -cf "$RUNNER_TEMP/artifact.tar"
             "./"
 
       - name: Upload github-pages artifact
