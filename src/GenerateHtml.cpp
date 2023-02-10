@@ -195,8 +195,8 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::END,"title");
         tag(os,TAG::INLINE) << R"(<meta property="og:title" content=")" << course_id << " - " << course_name << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="stylesheets" href="../css/common.css">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="stylesheets" href="../css/coursedisplay.css">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
         tag(os,TAG::END,"head");
         tag(os,TAG::BEGIN,R"(body class="search_plugin_added")");
         tag(os,TAG::BEGIN,R"(div id="qlog-header")");
@@ -228,6 +228,8 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::BEGIN,R"(h2 id="past-title")");
         tag(os,TAG::INLINE) << "Past Term Data" << '\n';
         tag(os,TAG::END,"h2");
+        tag(os,TAG::INLINE) << R"(<input type="radio" id="simple-view-input" name="view-select" value="simple" checked="checked">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<input type="radio" id="detail-view-input" name="view-select" value="detailed">)" << '\n';
         generate_opt_container(os);
         generate_years_table(terms_offered,prereqs_entry["cross_listings"],quatalog_data,os);
         tag(os,TAG::END,"div");
