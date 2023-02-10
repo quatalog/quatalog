@@ -12,6 +12,7 @@ struct quatalog_data_t {
         Json::Value prerequisites;
         Json::Value list_of_terms;
         Json::Value catalog;
+        Json::Value searchable_catalog;
 };
 enum struct TAG { BEGIN, END, INLINE, COMPLEX_BEGIN };
 enum struct TERM { SPRING, SUMMER, SUMMER2, SUMMER3, FALL, WINTER };
@@ -140,20 +141,31 @@ bool create_dir_if_not_exist(const fs::path& path) {
         return fs::create_directory(path);
 }
 
-const Json::Value& get_data(const Json::Value& data,
-                            std::string course_id) {
+Json::Value get_data(const Json::Value& data,
+                     std::string course_id) {
         course_id[4] = '-';
         if(course_id.substr(0,3) != "STS") {
                 return data[course_id];
         }
         const auto& stso = data[course_id];
-        if(stso) return stso;
         course_id[3] = 'S';
         const auto& stss = data[course_id];
-        if(stss) return stss;
         course_id[3] = 'H';
         const auto& stsh = data[course_id];
-        return stsh;
+        
+        Json::Value out;
+        
+        for(const auto& key : stso.getMemberNames()) {
+                out[key] = stso[key];
+        }
+        for(const auto& key : stss.getMemberNames()) {
+                out[key] = stss[key];
+        }
+        for(const auto& key : stsh.getMemberNames()) {
+                out[key] = stsh[key];
+        }
+
+        return out;
 }
 
 void generate_course_page(const std::string& course_id,
@@ -184,6 +196,8 @@ void generate_course_page(const std::string& course_id,
                                 "They are often recycled and used for new/experimental courses.";
         }
 
+        quatalog_data.searchable_catalog[]
+
         const std::regex escape_string(R"(")");
         const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
 
@@ -197,6 +211,8 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<script src="../js/fuse.js">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<script src="../js/search_helper.js">)" << '\n';
         tag(os,TAG::END,"head");
         tag(os,TAG::BEGIN,R"(body class="search_plugin_added")");
         tag(os,TAG::BEGIN,R"(div id="qlog-header")");
