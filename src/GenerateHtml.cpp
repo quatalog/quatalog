@@ -433,7 +433,8 @@ enum OFFERED is_course_offered(const int year,
                 return OFFERED::YES;
         } else {
                 for(const auto& cl : cross_listings) {
-                        if(get_data(terms_offered,cl.asString())) {
+                        const auto& data = get_data(qlog.terms_offered,cl.asString())[term_str];
+                        if(data) {
                                 return OFFERED::DIFF_CODE;
                         }
                 }
