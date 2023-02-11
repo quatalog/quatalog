@@ -130,7 +130,7 @@ int main(const int argc,
         outWriter->write(courses_list,&courses_list_file);
 
         searchable_catalog_file.close();
-        courses_list.close();
+        courses_list_file.close();
 }
 
 std::unordered_set<std::string> get_all_courses(const quatalog_data_t& qlog) {
