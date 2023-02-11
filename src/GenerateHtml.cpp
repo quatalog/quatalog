@@ -64,7 +64,7 @@ std::ostream& tag(std::ostream&,enum TAG,const std::string& = "");
 
 int main(const int argc,
          const char** argv) {
-        if(argc != 7) {
+        if(argc != 8) {
                 std::cerr << "Bad number of arguments (" << argc << ")" << std::endl;
                 std::cerr << "Usage: " << argv[0]
                         << " <terms_offered_file>"
@@ -72,7 +72,9 @@ int main(const int argc,
                         << " <list_of_terms_file>"
                         << " <catalog_file>"
                         << " <out_directory>"
+                        << " <courses_list_file>"
                         << " <searchable_catalog_file>"
+                        << " <courses_list_file>"
                         << std::endl;
                 return EXIT_FAILURE;
         }
@@ -82,26 +84,35 @@ int main(const int argc,
         const auto& catalog_filename = std::string(argv[4]);
         const auto& out_dir_path = fs::path(argv[5]);
         const auto& searchable_catalog_filename = fs::path(argv[6]);
+        const auto& courses_list_filename = fs::path(argv[7]);
 
         if(!create_dir_if_not_exist(out_dir_path)) {
                 std::cerr << "What" << std::endl;
                 return EXIT_FAILURE;
         }
 
+        quatalog_data_t quatalog_data;
+
         std::fstream terms_offered_file{terms_offered_filename,std::ios::in};
         std::fstream prerequisites_file{prerequisites_filename,std::ios::in};
         std::fstream list_of_terms_file{list_of_terms_filename,std::ios::in};
         std::fstream catalog_file{catalog_filename,std::ios::in};
 
-        quatalog_data_t quatalog_data;
         terms_offered_file >> quatalog_data.terms_offered;
         prerequisites_file >> quatalog_data.prerequisites;
         list_of_terms_file >> quatalog_data.list_of_terms;
         catalog_file >> quatalog_data.catalog;
 
+        terms_offered_file.close();
+        prerequisites_file.close();
+        list_of_terms_file.close();
+        catalog_file.close();
+
         auto courses = get_all_courses(quatalog_data);
         Json::Value searchable_catalog;
+        Json::Value courses_list;
         for(const auto& course : courses) {
+                courses_list.append(course);
                 const auto& html_path = out_dir_path / (course + ".html");
                 auto file = std::ofstream(html_path);
                 generate_course_page(course,quatalog_data,searchable_catalog,file);
@@ -113,9 +124,13 @@ int main(const int argc,
         std::unique_ptr<Json::StreamWriter> outWriter(swb.newStreamWriter());
 
         std::fstream searchable_catalog_file{searchable_catalog_filename,std::ios::out};
+        std::fstream courses_list_file{courses_list_filename,std::ios::out};
+
         outWriter->write(searchable_catalog,&searchable_catalog_file);
+        outWriter->write(courses_list,&courses_list_file);
 
         searchable_catalog_file.close();
+        courses_list.close();
 }
 
 std::unordered_set<std::string> get_all_courses(const quatalog_data_t& qlog) {
