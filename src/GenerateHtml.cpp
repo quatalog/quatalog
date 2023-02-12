@@ -208,6 +208,7 @@ void generate_course_page(const std::string& course_id,
         const auto& latest_term = terms_offered["latest_term"].asString();
         const auto& credits = terms_offered[latest_term]["credits"];
         const auto& credit_string = generate_credit_string(credits);
+        const auto& credit_string_long = credit_string + " " + (credits["credMax"].asInt() == 1 ? "credit" : "credits");
 
         if(catalog_entry) {
                 description = catalog_entry["description"].asString();
@@ -273,7 +274,7 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::END,"p");
         tag(os,TAG::BEGIN,R"(div id="cattrs-container")");
         tag(os,TAG::BEGIN,R"(span id="credits-pill" class="attr-pill")");
-        tag(os,TAG::INLINE) << credit_string << " " << (credits["credMax"].asInt() == 1 ? "credit" : "credits") << '\n';
+        tag(os,TAG::INLINE) << credit_string_long << '\n';
         tag(os,TAG::END,"span");
         generate_attributes(prereqs_entry["attributes"],os);
         tag(os,TAG::END,"div");
@@ -296,6 +297,7 @@ void generate_course_page(const std::string& course_id,
 }
 
 std::string generate_credit_string(const Json::Value& credits) {
+        if(credits == Json::Value::null) return "?";
         const int credMin = credits["min"].asInt();
         const int credMax = credits["max"].asInt();
         return (credMin == credMax) ? std::to_string(credMin) : (std::to_string(credMin) + "-" + std::to_string(credMax));
