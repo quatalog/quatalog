@@ -38,6 +38,13 @@ const std::unordered_map<enum TERM,std::string> term_to_number {
         { TERM::FALL,"09" },
         { TERM::WINTER,"12" }
 };
+const std::unordered_map<std::string,std::string> attr_to_short_attr {
+        { "Communication Intensive", "CI" },
+        { "Writing Intensive", "WI" },
+        { "HASS Inquiry", "HInq" },
+        { "Culminating Exp/Capstone", "CulmExp" },
+        { "PDII Option for Engr Majors", "PDII" }
+};
 std::unordered_set<std::string> get_all_courses(const quatalog_data_t&);
 std::string fix_course_ids(std::string);
 bool create_dir_if_not_exist(const fs::path&);
@@ -52,7 +59,7 @@ void generate_year_row(const int,const Json::Value&,const Json::Value&,const qua
 bool is_term_scheduled(const std::string&,const quatalog_data_t&);
 enum OFFERED is_course_offered(const int,const enum TERM,const Json::Value&,const Json::Value&,const quatalog_data_t&);
 void generate_table_cell(const int,const enum TERM,const Json::Value&,const enum OFFERED,std::ostream&);
-void generate_attributes(const Json::Value&,std::ostream&);
+void generate_attributes(const Json::Value&,std::ostream&,Json::Value&);
 void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
 void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
 void generate_course_pill(std::string,const quatalog_data_t&,std::ostream&);
@@ -230,7 +237,7 @@ void generate_course_page(const std::string& course_id,
         searchable_catalog_entry["code"] = course_id;
         searchable_catalog_entry["name"] = course_name;
         searchable_catalog_entry["description"] = description;
-        searchable_catalog.append(searchable_catalog_entry);
+        searchable_catalog_entry["credits"] = credit_string_long;
 
         const std::regex escape_string(R"(")");
         const std::string& description_meta = std::regex_replace(description,escape_string,"&quot;");
@@ -276,7 +283,7 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::BEGIN,R"(span id="credits-pill" class="attr-pill")");
         tag(os,TAG::INLINE) << credit_string_long << '\n';
         tag(os,TAG::END,"span");
-        generate_attributes(prereqs_entry["attributes"],os);
+        generate_attributes(prereqs_entry["attributes"],os,searchable_catalog_entry["attributes"]);
         tag(os,TAG::END,"div");
         generate_list(prereqs_entry["cross_listings"],"Cross-listed with:","crosslist",quatalog_data,os);
         generate_list(prereqs_entry["corequisites"],"Corequisites:","coreq",quatalog_data,os);
@@ -294,6 +301,8 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::END,"div");
         tag(os,TAG::END,"body");
         tag(os,TAG::END,"html");
+
+        searchable_catalog.append(searchable_catalog_entry);
 }
 
 std::string generate_credit_string(const Json::Value& credits) {
@@ -521,10 +530,16 @@ void generate_course_pill(std::string course_id,
 }
 
 void generate_attributes(const Json::Value& attributes,
-                         std::ostream& os) {
+                         std::ostream& os,
+                         Json::Value& attributes_catalog) {
         for(const auto& attribute : attributes) {
+                const auto& attr_str = attribute.asString();
+                const auto& attr_short_itr = attr_to_short_attr.find(attr_str);
+                if(attr_short_itr != attr_to_short_attr.end()) {
+                        attributes_catalog.append(attr_short_itr->second);
+                }
                 tag(os,TAG::BEGIN,R"(span class="attr-pill")");
-                tag(os,TAG::INLINE) << attribute.asString() << '\n';
+                tag(os,TAG::INLINE) << attr_str << '\n';
                 tag(os,TAG::END,"span");
         }
 }
