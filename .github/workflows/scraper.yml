@@ -111,15 +111,15 @@ jobs:
       - name: Merge data
         run: |
           rsync -avz courses/ quatalog-site/courses/
-          rsync -avz searchable_catalog.json quatalog-site/searchable_catalog.json
-          rsync -avz courses_list.json quatalog-site/courses_list.json
+          rsync -avz searchable_catalog.json quatalog-site/json/searchable_catalog.json
+          rsync -avz courses_list.json quatalog-site/json/courses_list.json
         
       - name: Push generated HTML
         working-directory: quatalog-site
         run: |
-          git config --global user.name "Quatalog Updater"
-          git config --global user.email "github_actions@quatalog.com"
-          git add courses searchable_catalog.json courses_list.json
+          git config user.name "Quatalog Updater"
+          git config user.email "github_actions@quatalog.com"
+          git add courses json
           git commit -m "$(date)" || exit 0
           git push
 
