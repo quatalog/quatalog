@@ -245,12 +245,12 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="shortcut icon" href="./favicon/quatalogIcon.png">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="icon" href="./favicon/favicon.ico">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">)" << '\n';
-        tag(os,TAG::INLINE) << R"(<link rel="manifest" href="./favicon/site.webmanifest">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="shortcut icon" href="../favicon/quatalogIcon.png">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="icon" href="../favicon/favicon.ico">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="apple-touch-icon" sizes="180x180" href="../favicon/apple-touch-icon.png">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="icon" type="image/png" sizes="32x32" href="../favicon/favicon-32x32.png">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="icon" type="image/png" sizes="16x16" href="../favicon/favicon-16x16.png">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="manifest" href="../favicon/site.webmanifest">)" << '\n';
         tag(os,TAG::INLINE) << R"(<script src="../js/fuse.js"></script>)" << '\n';
         tag(os,TAG::INLINE) << R"(<script src="../js/search_helper.js"></script>)" << '\n';
         tag(os,TAG::END,"head");
