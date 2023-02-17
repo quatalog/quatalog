@@ -4,6 +4,7 @@
 #include<iostream>
 #include<filesystem>
 #include<unordered_set>
+#include<unordered_map>
 #include<json/json.h>
 namespace fs = std::filesystem;
 
@@ -15,6 +16,13 @@ struct quatalog_data_t {
         Json::Value terms_offered;
         Json::Value prerequisites;
         Json::Value list_of_terms;
+};
+const std::unordered_map<std::string,std::string> attr_to_short_attr {
+        { "Communication Intensive", "[CI]" },
+        { "Writing Intensive", "[WI]" },
+        { "HASS Inquiry", "[HInq]" },
+        { "Culminating Exp/Capstone", "[CulmExp]" },
+        { "PDII Option for Engr Majors", "[PDII]" }
 };
 using course_handler_t = void(const Json::Value&,const std::string&,quatalog_data_t&,const Json::Value&);
 
@@ -322,18 +330,9 @@ void handle_attribute(const std::string& attribute,
 
 void handle_term_attribute(const std::string& attribute,
                            Json::Value& attributes) {
-        // These are the attributes we want to display in the
-        // course years table
-        if(attribute == "Communication Intensive") {
-                attributes.append("[CI]");
-        } else if(attribute == "Writing Intensive") {
-                attributes.append("[WI]");
-        } else if(attribute == "HASS Inquiry") {
-                attributes.append("[HInq]");
-        } else if(attribute == "Culminating Exp/Capstone") {
-                attributes.append("[CulmExp]");
-        } else if(attribute == "PDII Option for Engr Majors") {
-                attributes.append("[PDII]");
+        const auto& attr_short_itr = attr_to_short_attr.find(attribute);
+        if(attr_short_itr != attr_to_short_attr.end()) {
+                attributes.append(attr_short_itr->second);
         }
 }
 
