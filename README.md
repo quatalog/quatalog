@@ -12,8 +12,8 @@ The Quatalog aims to make course planning easier by providing accurate prerequis
 given course was offered in the past, as well as data for how many students were enrolled in the course,
 and the professor(s) teaching during a given semester.
 
-The name comes from [QuACS](https://github.com/quacs/quacs), which is the [source of data](https://github.com/quacs/quacs-data) for this project.
+The name comes from [QuACS](https://github.com/quacs/quacs), which is the [source of data](https://github.com/quacs/quacs-data) for this project. I have also contributed to QuACS a bit (primarily their SIS scraper; I was not interested in writing my own which is why we use their data) while working on the Quatalog.
 
-This is the main quatalog repo, which includes the data scraper (converts quacs-data into the quatalog's data format). To see the data for this project, see the [data repo](https://github.com/quatalog/data), and to see the static site, see the [site repo](https://github.com/quacs/site).
+This is the main quatalog repo, which includes the data scraper (converts quacs-data into the quatalog's data format). To see the data for this project, see the [data repo](https://github.com/quatalog/data), and to see the static site, see the [site repo](https://github.com/quatalog/site).
 
 The Quatalog project is a memeber of the [Rensselaer Center for Open Source (RCOS)](https://rcos.io).
