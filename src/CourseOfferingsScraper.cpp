@@ -38,7 +38,7 @@ void handle_multiple_instructors(const std::string&,std::unordered_set<std::stri
 void handle_attributes(const Json::Value&,const std::string&,Json::Value&,Json::Value&);
 void handle_term_attribute(const std::string&,Json::Value&);
 void handle_attribute(const std::string&,Json::Value&,Json::Value&);
-template<typename Functor> void iterateOnDelimitedString(const std::string&,const std::regex&,const Functor&);
+template<typename Functor> void iterate_on_delimited_string(const std::string&,const std::regex&,const Functor&);
 void handle_prereqs(const Json::Value&,const std::string&,Json::Value&,const Json::Value&);
 
 int main(const int argc,
@@ -287,7 +287,7 @@ void handle_instructors(const Json::Value& section,
 
 void handle_multiple_instructors(const std::string& instructor_str,
                                  std::unordered_set<std::string>& instructors) {
-        iterateOnDelimitedString(instructor_str,
+        iterate_on_delimited_string(instructor_str,
                                  std::regex(", ?"),
                                  [&](const std::string& inst_str) {
                 if(inst_str == "TBA") return;
@@ -304,7 +304,7 @@ void handle_attributes(const Json::Value& section,
         Json::Value attributes = Json::arrayValue;
         term_attributes = Json::arrayValue;
 
-        iterateOnDelimitedString(section["attribute"].asString(),
+        iterate_on_delimited_string(section["attribute"].asString(),
                                  std::regex(" and |, "),
                                  [&](const std::string& attr_str) {
                 handle_attribute(attr_str,
@@ -312,8 +312,7 @@ void handle_attributes(const Json::Value& section,
                                  term_attributes);
         });
 
-        if(!attributes.empty())
-                out_prereqs[course_id]["attributes"] = attributes;
+        out_prereqs[course_id]["attributes"] = attributes;
 }
 
 void handle_attribute(const std::string& attribute,
@@ -337,7 +336,7 @@ void handle_term_attribute(const std::string& attribute,
 }
 
 template<typename Functor>
-void iterateOnDelimitedString(const std::string& str,
+void iterate_on_delimited_string(const std::string& str,
                               const std::regex& delim,
                               const Functor& callback) {
         // This mess is basically C++'s string split but not using
