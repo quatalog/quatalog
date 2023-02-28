@@ -215,7 +215,7 @@ void generate_course_page(const std::string& course_id,
         const auto& latest_term = terms_offered["latest_term"].asString();
         const auto& credits = terms_offered[latest_term]["credits"];
         const auto& credit_string = generate_credit_string(credits);
-        const auto& credit_string_long = credit_string + " " + (credits["credMax"].asInt() == 1 ? "credit" : "credits");
+        const auto& credit_string_long = credit_string + " " + (credits["max"].asInt() == 1 ? "credit" : "credits");
 
         if(catalog_entry) {
                 description = catalog_entry["description"].asString();
