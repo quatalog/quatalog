@@ -521,7 +521,7 @@ void generate_course_pill(std::string course_id,
         course_id[4] = '-';
         const auto& title = get_course_title(course_id,qlog);
         tag(os,TAG::INLINE) << R"(<a class="course-pill" href=")" << course_id
-                           << R"(.html">)"
+                           << R"(">)"
                            << course_id;
         if(!title.empty()) {
                 os << " " << title;
