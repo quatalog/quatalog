@@ -2,7 +2,7 @@ name: Update data, generate static site, and deploy to Pages
 on:
   workflow_dispatch:
   schedule:
-    - cron: '20 1 * * *'
+    - cron: '15 * * * *'
 
 jobs:
   scrape-data:
