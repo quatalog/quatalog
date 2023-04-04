@@ -252,6 +252,7 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::INLINE) << R"(<meta property="og:description" content=")" << description_meta << R"(">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/common.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/coursedisplay.css">)" << '\n';
+        tag(os,TAG::INLINE) << R"(<link rel="stylesheet" href="../css/themes.css">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="shortcut icon" href="../favicon/quatalogIcon.png">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="icon" href="../favicon/favicon.ico">)" << '\n';
         tag(os,TAG::INLINE) << R"(<link rel="apple-touch-icon" sizes="180x180" href="../favicon/apple-touch-icon.png">)" << '\n';
