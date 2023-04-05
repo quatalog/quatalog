@@ -415,7 +415,7 @@ void generate_table_cell(const int year,
                         << year << term_to_number_no_half.at(term)
                         << "&subj_in=" << course_id.substr(0,4)
                         << "&crse_in=" << course_id.substr(5,4)
-                        << "&schd_in=L"
+                        << "&schd_in="
                         << R"(">)" << course_title << " (" << credit_string << "c)</a>";
                 for(const auto& attr : term_offered["attributes"]) {
                         os << ' ' << attr.asString();
