@@ -38,6 +38,14 @@ const std::unordered_map<enum TERM,std::string> term_to_number {
         { TERM::FALL,"09" },
         { TERM::WINTER,"12" }
 };
+const std::unordered_map<enum TERM,std::string> term_to_number_no_half {
+        { TERM::SPRING,"01" },
+        { TERM::SUMMER,"05" },
+        { TERM::SUMMER2,"05" },
+        { TERM::SUMMER3,"05" },
+        { TERM::FALL,"09" },
+        { TERM::WINTER,"12" }
+};
 const std::unordered_map<std::string,std::string> attr_to_short_attr {
         { "Communication Intensive", "CI" },
         { "Writing Intensive", "WI" },
@@ -54,11 +62,11 @@ void get_prerequisites(const quatalog_data_t&,std::string);
 void generate_opt_container(std::ostream&);
 std::string generate_credit_string(const Json::Value& credits);
 std::string get_course_title(const std::string&,const quatalog_data_t&);
-void generate_years_table(const Json::Value&,const Json::Value&,const quatalog_data_t&,std::ostream&);
-void generate_year_row(const int,const Json::Value&,const Json::Value&,const quatalog_data_t&,std::ostream&);
+void generate_years_table(const Json::Value&,const Json::Value&,const quatalog_data_t&,const std::string&,std::ostream&);
+void generate_year_row(const int,const Json::Value&,const Json::Value&,const quatalog_data_t&,const std::string&,std::ostream&);
 bool is_term_scheduled(const std::string&,const quatalog_data_t&);
 enum OFFERED is_course_offered(const int,const enum TERM,const Json::Value&,const Json::Value&,const quatalog_data_t&);
-void generate_table_cell(const int,const enum TERM,const Json::Value&,const enum OFFERED,std::ostream&);
+void generate_table_cell(const int,const enum TERM,const Json::Value&,const enum OFFERED,const std::string&,std::ostream&);
 void generate_attributes(const Json::Value&,std::ostream&,Json::Value&);
 void generate_list(const Json::Value&,const std::string&,const std::string&,const quatalog_data_t&,std::ostream&);
 void generate_prereq_display(const Json::Value&,const quatalog_data_t&,std::ostream&);
@@ -79,7 +87,6 @@ int main(const int argc,
                         << " <list_of_terms_file>"
                         << " <catalog_file>"
                         << " <out_directory>"
-                        << " <courses_list_file>"
                         << " <searchable_catalog_file>"
                         << " <courses_list_file>"
                         << std::endl;
@@ -297,7 +304,7 @@ void generate_course_page(const std::string& course_id,
         tag(os,TAG::INLINE) << R"(<input type="radio" id="simple-view-input" name="view-select" value="simple" checked="checked">)" << '\n';
         tag(os,TAG::INLINE) << R"(<input type="radio" id="detail-view-input" name="view-select" value="detailed">)" << '\n';
         generate_opt_container(os);
-        generate_years_table(terms_offered,prereqs_entry["cross_listings"],quatalog_data,os);
+        generate_years_table(terms_offered,prereqs_entry["cross_listings"],quatalog_data,course_id,os);
         tag(os,TAG::END,"div");
         tag(os,TAG::END,"div");
         tag(os,TAG::END,"body");
@@ -316,6 +323,7 @@ std::string generate_credit_string(const Json::Value& credits) {
 void generate_years_table(const Json::Value& terms_offered,
                           const Json::Value& cross_listings,
                           const quatalog_data_t& qlog,
+                          const std::string& course_id,
                           std::ostream& os) {
         tag(os,TAG::BEGIN,R"(table id="years-table")");
         tag(os,TAG::BEGIN,"thead");
@@ -341,7 +349,7 @@ void generate_years_table(const Json::Value& terms_offered,
         const int current_year = std::stoi(qlog.list_of_terms["current_term"].asString().substr(0,4));
         const int oldest_year = std::stoi(qlog.list_of_terms["oldest_term"].asString().substr(0,4));
         for(int year = current_year;year >= oldest_year;year--) {
-                generate_year_row(year,terms_offered,cross_listings,qlog,os);
+                generate_year_row(year,terms_offered,cross_listings,qlog,course_id,os);
         }
 
         tag(os,TAG::END,"tbody");
@@ -352,28 +360,29 @@ void generate_year_row(const int year,
                        const Json::Value& terms_offered,
                        const Json::Value& cross_listings,
                        const quatalog_data_t& qlog,
+                       const std::string& course_id,
                        std::ostream& os) {
         tag(os,TAG::BEGIN,"tr");
         tag(os,TAG::INLINE) << R"(<th class="year">)" << year << "</th>" << '\n';
 
-        generate_table_cell(year,TERM::SPRING,terms_offered,is_course_offered(year,TERM::SPRING,terms_offered,cross_listings,qlog),os);
+        generate_table_cell(year,TERM::SPRING,terms_offered,is_course_offered(year,TERM::SPRING,terms_offered,cross_listings,qlog),course_id,os);
 
         const enum OFFERED summer1 = is_course_offered(year,TERM::SUMMER,terms_offered,cross_listings,qlog);
         if(summer1 != OFFERED::NO) {
-                generate_table_cell(year,TERM::SUMMER,terms_offered,summer1,os);
+                generate_table_cell(year,TERM::SUMMER,terms_offered,summer1,course_id,os);
         } else {
                 const enum OFFERED summer2 = is_course_offered(year,TERM::SUMMER2,terms_offered,cross_listings,qlog);
                 const enum OFFERED summer3 = is_course_offered(year,TERM::SUMMER3,terms_offered,cross_listings,qlog);
                 if((summer2 == OFFERED::NO || summer2 == OFFERED::UNSCHEDULED)
                 && (summer3 == OFFERED::NO || summer3 == OFFERED::UNSCHEDULED)) {
-                        generate_table_cell(year,TERM::SUMMER,terms_offered,summer1,os);
+                        generate_table_cell(year,TERM::SUMMER,terms_offered,summer1,course_id,os);
                 } else {
-                        generate_table_cell(year,TERM::SUMMER2,terms_offered,summer2,os);
-                        generate_table_cell(year,TERM::SUMMER3,terms_offered,summer3,os);
+                        generate_table_cell(year,TERM::SUMMER2,terms_offered,summer2,course_id,os);
+                        generate_table_cell(year,TERM::SUMMER3,terms_offered,summer3,course_id,os);
                 }
         }
 
-        generate_table_cell(year,TERM::FALL,terms_offered,is_course_offered(year,TERM::FALL,terms_offered,cross_listings,qlog),os);
+        generate_table_cell(year,TERM::FALL,terms_offered,is_course_offered(year,TERM::FALL,terms_offered,cross_listings,qlog),course_id,os);
         //generate_table_cell(year,TERM::WINTER,terms_offered,is_course_offered(year,TERM::WINTER,terms_offered,cross_listings,qlog),os);
 
         tag(os,TAG::END,"tr");
@@ -383,6 +392,7 @@ void generate_table_cell(const int year,
                          const enum TERM term,
                          const Json::Value& terms_offered,
                          const enum OFFERED is_offered,
+                         const std::string& course_id,
                          std::ostream& os) {
         std::string year_term = std::to_string(year) + term_to_number.at(term);
         const auto& term_offered = terms_offered[year_term];
@@ -397,11 +407,16 @@ void generate_table_cell(const int year,
                 << term_to_string.at(term) << ' '
                 << offered_to_string.at(is_offered)
                 << R"(">)" << '\n';
+
         if(is_offered == OFFERED::YES) {
                 tag(os,TAG::BEGIN,R"(div class="view-container detail-view-container")");
                 tag(os,TAG::BEGIN,R"(span class="term-course-info")");
-
-                tag(os,TAG::INLINE) << course_title << " (" << credit_string << "c)";
+                tag(os,TAG::INLINE) << R"(<a href="https://sis.rpi.edu/rss/bwckctlg.p_disp_listcrse?term_in=)"
+                        << year << term_to_number_no_half.at(term)
+                        << "&subj_in=" << course_id.substr(0,4)
+                        << "&crse_in=" << course_id.substr(5,4)
+                        << "&schd_in=L"
+                        << R"(">)" << course_title << " (" << credit_string << "c)</a>";
                 for(const auto& attr : term_offered["attributes"]) {
                         os << ' ' << attr.asString();
                 }
