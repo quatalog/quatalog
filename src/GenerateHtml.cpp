@@ -198,12 +198,18 @@ Json::Value get_data(const Json::Value& data,
         
         for(const auto& key : stsh.getMemberNames()) {
                 out[key] = stsh[key];
+                if(out[key].isObject())
+                    out[key]["prefix"] = "STSH";
         }
         for(const auto& key : stss.getMemberNames()) {
                 out[key] = stss[key];
+                if(out[key].isObject())
+                    out[key]["prefix"] = "STSS";
         }
         for(const auto& key : stso.getMemberNames()) {
                 out[key] = stso[key];
+                if(out[key].isObject())
+                    out[key]["prefix"] = "STSO";
         }
 
         return out;
@@ -413,7 +419,7 @@ void generate_table_cell(const int year,
                 tag(os,TAG::BEGIN,R"(span class="term-course-info")");
                 tag(os,TAG::INLINE) << R"(<a href="https://sis.rpi.edu/rss/bwckctlg.p_disp_listcrse?term_in=)"
                         << year << term_to_number_no_half.at(term)
-                        << "&subj_in=" << course_id.substr(0,4)
+                        << "&subj_in=" << (course_id.substr(0,3) != "STS" ? course_id.substr(0,4) : term_offered["prefix"].asString())
                         << "&crse_in=" << course_id.substr(5,4)
                         << "&schd_in="
                         << R"(">)" << course_title << " (" << credit_string << "c)</a>";
