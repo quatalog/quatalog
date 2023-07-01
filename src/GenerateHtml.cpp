@@ -196,14 +196,14 @@ Json::Value get_data(const Json::Value& data,
         
         Json::Value out;
         
-        for(const auto& key : stso.getMemberNames()) {
-                out[key] = stso[key];
+        for(const auto& key : stsh.getMemberNames()) {
+                out[key] = stsh[key];
         }
         for(const auto& key : stss.getMemberNames()) {
                 out[key] = stss[key];
         }
-        for(const auto& key : stsh.getMemberNames()) {
-                out[key] = stsh[key];
+        for(const auto& key : stso.getMemberNames()) {
+                out[key] = stso[key];
         }
 
         return out;
