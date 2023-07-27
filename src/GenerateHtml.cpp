@@ -1,4 +1,5 @@
 #include<regex>
+#include<utility>
 #include<fstream>
 #include<iostream>
 #include<filesystem>
@@ -61,7 +62,7 @@ void generate_course_page(const std::string&,const quatalog_data_t&,Json::Value&
 void get_prerequisites(const quatalog_data_t&,std::string);
 void generate_opt_container(std::ostream&);
 std::string generate_credit_string(const Json::Value& credits);
-std::string get_course_title(const std::string&,const quatalog_data_t&);
+std::pair<std::string,std::string> get_course_title_and_description(const std::string&,const quatalog_data_t&);
 void generate_years_table(const Json::Value&,const Json::Value&,const quatalog_data_t&,const std::string&,std::ostream&);
 void generate_year_row(const int,const Json::Value&,const Json::Value&,const quatalog_data_t&,const std::string&,std::ostream&);
 bool is_term_scheduled(const std::string&,const quatalog_data_t&);
@@ -227,13 +228,13 @@ Json::Value get_data(const Json::Value& data,
                 course_id.replace(0,4,"IHSS");
                 const auto& ihss = data[course_id];
 
-                for(const auto& key : inqr.getMemberNames()) {
-                        out[key] = inqr[key];
-                        if(out[key].isObject()) out[key]["prefix"] = "INQR";
-                }
                 for(const auto& key : ihss.getMemberNames()) {
                         out[key] = ihss[key];
                         if(out[key].isObject()) out[key]["prefix"] = "IHSS";
+                }
+                for(const auto& key : inqr.getMemberNames()) {
+                        out[key] = inqr[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "INQR";
                 }
         } else {
                 out = data[course_id];
@@ -249,31 +250,15 @@ void generate_course_page(const std::string& course_id,
                           Json::Value& searchable_catalog,
                           std::ostream& os) {
         std::cerr << "Generating course page for " << course_id << "..." << std::endl;
-        std::string course_name = get_course_title(course_id,quatalog_data);
-        std::string description;
-        const auto& catalog_entry = quatalog_data.catalog[course_id];
+        const auto& title_and_description = get_course_title_and_description(course_id,quatalog_data);
+        const auto& course_name = title_and_description.first;
+        const auto& description = title_and_description.second;
         const auto& prereqs_entry = get_data(quatalog_data.prerequisites,course_id);
         const auto& terms_offered = get_data(quatalog_data.terms_offered,course_id);
         const auto& latest_term = terms_offered["latest_term"].asString();
         const auto& credits = terms_offered[latest_term]["credits"];
         const auto& credit_string = generate_credit_string(credits);
         const auto& credit_string_long = credit_string + " " + (credits["max"].asInt() == 1 ? "credit" : "credits");
-
-        if(catalog_entry) {
-                description = catalog_entry["description"].asString();
-        } else {
-                description = "This course is not in the most recent catalog. "
-                                "It may have been discontinued, had its course "
-                                "code changed, or just not be in the catalog for "
-                                "some other reason.";
-        }
-        const auto& mid_digits = course_id.substr(6,2);
-        if(mid_digits == "96" || mid_digits == "97") {
-                course_name = "Topics in " + course_id.substr(0,4);
-                description = "Course codes between X960 and X979 are for topics "
-                                "courses. They are often recycled and used for new "
-                                "or experimental courses.";
-        }
 
         Json::Value searchable_catalog_entry;
         searchable_catalog_entry["code"] = course_id;
@@ -551,16 +536,34 @@ void generate_opt_container(std::ostream& os) {
         tag(os,TAG::END,"div");
 }
 
-std::string get_course_title(const std::string& course_id,
-                             const quatalog_data_t& quatalog_data) {
+std::pair<std::string,std::string>
+get_course_title_and_description(const std::string& course_id,
+                                 const quatalog_data_t& quatalog_data) {
         const auto& catalog_entry = get_data(quatalog_data.catalog,course_id);
         const auto& terms_offered = get_data(quatalog_data.terms_offered,course_id);
         const auto& latest_term = terms_offered["latest_term"].asString();
+        std::string title, description;
         if(catalog_entry) {
-                return catalog_entry["name"].asString();
+                title = catalog_entry["name"].asString();
         } else {
-                return terms_offered[latest_term]["title"].asString();
+                title = terms_offered[latest_term]["title"].asString();
         }
+        if(catalog_entry) {
+                description = catalog_entry["description"].asString();
+        } else {
+                description = "This course is not in the most recent catalog. "
+                              "It may have been discontinued, had its course "
+                              "code changed, or just not be in the catalog for "
+                              "some other reason.";
+        }
+        const auto& mid_digits = course_id.substr(6,2);
+        if(mid_digits == "96" || mid_digits == "97") {
+                title = "Topics in " + course_id.substr(0,4);
+                description = "Course codes between X960 and X979 are for topics "
+                              "courses. They are often recycled and used for new "
+                              "or experimental courses.";
+        }
+        return std::make_pair(title,description);
 }
 
 void generate_course_pill(std::string course_id,
@@ -570,7 +573,7 @@ void generate_course_pill(std::string course_id,
                 course_id[3] = 'O';
         }
         course_id[4] = '-';
-        const auto& title = get_course_title(course_id,qlog);
+        const auto& title = get_course_title_and_description(course_id,qlog).first;
         tag(os,TAG::INLINE) << R"(<a class="course-pill" href=")" << course_id
                            << R"(">)"
                            << course_id;
