@@ -165,7 +165,7 @@ std::string fix_course_ids(std::string course) {
                 course[3] = 'O';
         } else if(course.substr(0,4) == "ITEC") {
                 course.replace(0,4,"ITWS");
-        } else if(course.substr(0,4) == "IHSS") {
+        } else if(course.substr(0,6) == "IHSS-1") {
                 course.replace(0,4,"INQR");
         }
         return course;
@@ -191,7 +191,6 @@ Json::Value get_data(const Json::Value& data,
         Json::Value out;
         course_id[4] = '-';
         if(course_id.substr(0,4) == "STSO") {
-                std::cerr<<"course id: "<<course_id<<std::endl;
                 const auto& stso = data[course_id];
                 course_id[3] = 'S';
                 const auto& stss = data[course_id];
@@ -223,7 +222,7 @@ Json::Value get_data(const Json::Value& data,
                         out[key] = itws[key];
                         if(out[key].isObject()) out[key]["prefix"] = "ITWS";
                 }
-        } else if(course_id.substr(0,4) == "INQR") {
+        } else if(course_id.substr(0,6) == "INQR") {
                 const auto& inqr = data[course_id];
                 course_id.replace(0,4,"IHSS");
                 const auto& ihss = data[course_id];
