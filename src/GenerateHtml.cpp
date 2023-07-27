@@ -186,6 +186,7 @@ bool create_dir_if_not_exist(const fs::path& path) {
 
 Json::Value get_data(const Json::Value& data,
                      std::string course_id) {
+        Json::Value out;
         course_id[4] = '-';
         if(course_id.substr(0,4) == "STSO") {
                 std::cerr<<"course id: "<<course_id<<std::endl;
@@ -194,8 +195,6 @@ Json::Value get_data(const Json::Value& data,
                 const auto& stss = data[course_id];
                 course_id[3] = 'H';
                 const auto& stsh = data[course_id];
-
-                Json::Value out;
 
                 for(const auto& key : stsh.getMemberNames()) {
                         out[key] = stsh[key];
@@ -209,13 +208,10 @@ Json::Value get_data(const Json::Value& data,
                         out[key] = stso[key];
                         if(out[key].isObject()) out[key]["prefix"] = "STSO";
                 }
-                return out;
         } else if(course_id.substr(0,4) == "ITWS") {
                 const auto& itws = data[course_id];
                 course_id.replace(0,4,"ITEC");
                 const auto& itec = data[course_id];
-
-                Json::Value out;
 
                 for(const auto& key : itec.getMemberNames()) {
                         out[key] = itec[key];
@@ -225,10 +221,11 @@ Json::Value get_data(const Json::Value& data,
                         out[key] = itws[key];
                         if(out[key].isObject()) out[key]["prefix"] = "ITWS";
                 }
-                return out;
         } else {
-            return data[course_id];
+                out = data[course_id];
+                out[key]["prefix"] = course_id.substr(0,4);
         }
+        return out;
 }
 
 void generate_course_page(const std::string& course_id,
@@ -435,7 +432,7 @@ void generate_table_cell(const int year,
                 tag(os,TAG::BEGIN,R"(span class="term-course-info")");
                 tag(os,TAG::INLINE) << R"(<a href="https://sis.rpi.edu/rss/bwckctlg.p_disp_listcrse?term_in=)"
                         << year << term_to_number_no_half.at(term)
-                        << "&subj_in=" << (course_id.substr(0,3) != "STS" ? course_id.substr(0,4) : term_offered["prefix"].asString())
+                        << "&subj_in=" << term_offered["prefix"].asString()
                         << "&crse_in=" << course_id.substr(5,4)
                         << "&schd_in="
                         << R"(">)" << course_title << " (" << credit_string << "c)</a>";
