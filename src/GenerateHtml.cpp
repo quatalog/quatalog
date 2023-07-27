@@ -163,6 +163,8 @@ std::string fix_course_ids(std::string course) {
         course[4] = '-';
         if(course.substr(0,3) == "STS") {
                 course[3] = 'O';
+        } else if(course.substr(0,4) == "ITEC") {
+                course.replace(0,4,"ITWS");
         }
         return course;
 }
@@ -185,34 +187,48 @@ bool create_dir_if_not_exist(const fs::path& path) {
 Json::Value get_data(const Json::Value& data,
                      std::string course_id) {
         course_id[4] = '-';
-        if(course_id.substr(0,3) != "STS") {
-                return data[course_id];
-        }
-        const auto& stso = data[course_id];
-        course_id[3] = 'S';
-        const auto& stss = data[course_id];
-        course_id[3] = 'H';
-        const auto& stsh = data[course_id];
-        
-        Json::Value out;
-        
-        for(const auto& key : stsh.getMemberNames()) {
-                out[key] = stsh[key];
-                if(out[key].isObject())
-                    out[key]["prefix"] = "STSH";
-        }
-        for(const auto& key : stss.getMemberNames()) {
-                out[key] = stss[key];
-                if(out[key].isObject())
-                    out[key]["prefix"] = "STSS";
-        }
-        for(const auto& key : stso.getMemberNames()) {
-                out[key] = stso[key];
-                if(out[key].isObject())
-                    out[key]["prefix"] = "STSO";
-        }
+        if(course_id.substr(0,4) == "STSO") {
+                std::cerr<<"course id: "<<course_id<<std::endl;
+                const auto& stso = data[course_id];
+                course_id[3] = 'S';
+                const auto& stss = data[course_id];
+                course_id[3] = 'H';
+                const auto& stsh = data[course_id];
 
-        return out;
+                Json::Value out;
+
+                for(const auto& key : stsh.getMemberNames()) {
+                        out[key] = stsh[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "STSH";
+                }
+                for(const auto& key : stss.getMemberNames()) {
+                        out[key] = stss[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "STSS";
+                }
+                for(const auto& key : stso.getMemberNames()) {
+                        out[key] = stso[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "STSO";
+                }
+                return out;
+        } else if(course_id.substr(0,4) == "ITWS") {
+                const auto& itws = data[course_id];
+                course_id.replace(0,4,"ITEC");
+                const auto& itec = data[course_id];
+
+                Json::Value out;
+
+                for(const auto& key : itec.getMemberNames()) {
+                        out[key] = itec[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "ITEC";
+                }
+                for(const auto& key : itws.getMemberNames()) {
+                        out[key] = itws[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "ITWS";
+                }
+                return out;
+        } else {
+            return data[course_id];
+        }
 }
 
 void generate_course_page(const std::string& course_id,
