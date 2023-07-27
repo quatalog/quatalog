@@ -222,7 +222,7 @@ Json::Value get_data(const Json::Value& data,
                         out[key] = itws[key];
                         if(out[key].isObject()) out[key]["prefix"] = "ITWS";
                 }
-        } else if(course_id.substr(0,6) == "INQR") {
+        } else if(course_id.substr(0,4) == "INQR") {
                 const auto& inqr = data[course_id];
                 course_id.replace(0,4,"IHSS");
                 const auto& ihss = data[course_id];
