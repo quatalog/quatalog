@@ -569,10 +569,7 @@ get_course_title_and_description(const std::string& course_id,
 void generate_course_pill(std::string course_id,
                           const quatalog_data_t& qlog,
                           std::ostream& os) {
-        if(course_id.substr(0,3) == "STS") {
-                course_id[3] = 'O';
-        }
-        course_id[4] = '-';
+        course_id = fix_course_ids(course_id);
         const auto& title = get_course_title_and_description(course_id,qlog).first;
         tag(os,TAG::INLINE) << R"(<a class="course-pill" href=")" << course_id
                            << R"(">)"
