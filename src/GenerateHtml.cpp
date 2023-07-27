@@ -223,7 +223,9 @@ Json::Value get_data(const Json::Value& data,
                 }
         } else {
                 out = data[course_id];
-                out[key]["prefix"] = course_id.substr(0,4);
+                for(const auto& key : out.getMemberNames()) {
+                        if(out[key].isObject()) out[key]["prefix"] = course_id.substr(0,4);
+                }
         }
         return out;
 }
