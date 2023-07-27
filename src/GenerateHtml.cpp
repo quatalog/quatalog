@@ -165,6 +165,8 @@ std::string fix_course_ids(std::string course) {
                 course[3] = 'O';
         } else if(course.substr(0,4) == "ITEC") {
                 course.replace(0,4,"ITWS");
+        } else if(course.substr(0,4) == "IHSS") {
+                course.replace(0,4,"INQR");
         }
         return course;
 }
@@ -220,6 +222,19 @@ Json::Value get_data(const Json::Value& data,
                 for(const auto& key : itws.getMemberNames()) {
                         out[key] = itws[key];
                         if(out[key].isObject()) out[key]["prefix"] = "ITWS";
+                }
+        } else if(course_id.substr(0,4) == "INQR") {
+                const auto& inqr = data[course_id];
+                course_id.replace(0,4,"IHSS");
+                const auto& ihss = data[course_id];
+
+                for(const auto& key : inqr.getMemberNames()) {
+                        out[key] = inqr[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "INQR";
+                }
+                for(const auto& key : ihss.getMemberNames()) {
+                        out[key] = ihss[key];
+                        if(out[key].isObject()) out[key]["prefix"] = "IHSS";
                 }
         } else {
                 out = data[course_id];
