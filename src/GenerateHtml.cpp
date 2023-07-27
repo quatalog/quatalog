@@ -251,7 +251,7 @@ void generate_course_page(const std::string& course_id,
         std::cerr << "Generating course page for " << course_id << "..." << std::endl;
         std::string course_name = get_course_title(course_id,quatalog_data);
         std::string description;
-        const auto& catalog_entry = quatalog_data.catalog[course_id];
+        const auto& catalog_entry = get_data(quatalog_data.catalog,course_id);
         const auto& prereqs_entry = get_data(quatalog_data.prerequisites,course_id);
         const auto& terms_offered = get_data(quatalog_data.terms_offered,course_id);
         const auto& latest_term = terms_offered["latest_term"].asString();
