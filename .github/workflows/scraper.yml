@@ -144,11 +144,12 @@ jobs:
       
       - name: Create CSV file
         run: |
-          grep -oe '<li>.*</li>' static-generated/courses/*.html | 
+          cd static-generated/courses
+          grep -oe '<li>.*</li>' *.html | 
             sort -u |
             grep -ve "-[0-9]9[4-7][0-9]" -e "-[0-9]9[89]0" -e "-[0-9]000[1-9]" -e "USAR" -e "ADMN" -e "USNA" -e "USAF" |
             sed -e 's/^/"/' -e 's/.html:<li>/","/' -e 's#</li>#"#' -e 's/"\([^"]*\)","\([^"]*\)"/"\2","\1"/' | 
-            sort > quatalog-data/courses.csv
+            sort > ../../quatalog-data/courses.csv
             
       - name: Push CSV file
         working-directory: quatalog-data
