@@ -1,3 +1,4 @@
+#include<set>
 #include<regex>
 #include<utility>
 #include<fstream>
@@ -54,7 +55,7 @@ const std::unordered_map<std::string,std::string> attr_to_short_attr {
         { "Culminating Exp/Capstone", "CulmExp" },
         { "PDII Option for Engr Majors", "PDII" }
 };
-std::unordered_set<std::string> get_all_courses(const quatalog_data_t&);
+std::set<std::string> get_all_courses(const quatalog_data_t&);
 std::string fix_course_ids(std::string);
 bool create_dir_if_not_exist(const fs::path&);
 Json::Value get_data(const Json::Value&,std::string);
@@ -148,8 +149,8 @@ int main(const int argc,
         courses_list_file.close();
 }
 
-std::unordered_set<std::string> get_all_courses(const quatalog_data_t& qlog) {
-        std::unordered_set<std::string> output;
+std::set<std::string> get_all_courses(const quatalog_data_t& qlog) {
+        std::set<std::string> output;
         for(const std::string& course : qlog.catalog.getMemberNames()) {
                 if(course.length() != 9) continue; 
                 output.insert(fix_course_ids(course));
