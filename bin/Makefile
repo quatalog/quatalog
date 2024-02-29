@@ -1,6 +1,6 @@
 CXX = clang++
 CXXFLAGS = -O2 -march=native -Wall -std=c++17 -I../3rdparty/jsoncpp/dist/
-vpath %.cpp ../src
+vpath %.cpp ../courseinfo_scraper
 
 .PHONY: all
 all: CourseOfferingsScraper GenerateHtml
