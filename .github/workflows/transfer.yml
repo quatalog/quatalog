@@ -63,7 +63,7 @@ jobs:
     needs: [scrape-data]
     steps:
       - name: Clone Quatalog data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           repository: quatalog/data
           path: quatalog-data
@@ -73,7 +73,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: transfer-data
-          path: data/
+          path: data
 
       - name: Copy data to repo directory
         run: |
