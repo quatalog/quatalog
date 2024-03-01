@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout scraping repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: quatalog-scraping
         
       - name: Clone QuACS data
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quacs/quacs-data
           path: quacs-data
@@ -36,7 +36,7 @@ jobs:
           rsync -avz "quacs-data/semester_data/$CURRENT_TERM/catalog.json" new-data/catalog.json
           
       - name: Upload data to artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: new-data
           path: new-data/
@@ -47,14 +47,14 @@ jobs:
     needs: [scrape-data]
     steps:
       - name: Clone Quatalog data
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/data
           path: quatalog-data
           token: ${{ secrets.PUSH_TOKEN }}
     
       - name: Download data from artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: new-data
           path: new-data
@@ -78,12 +78,12 @@ jobs:
     needs: [scrape-data]
     steps:
       - name: Checkout scraping repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: quatalog-scraping
       
       - name: Clone Quatalog static site
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/site
           ref: static-generated
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.PUSH_TOKEN }}
       
       - name: Download data from artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: new-data
           path: new-data
@@ -129,14 +129,14 @@ jobs:
     needs: [generate-site]
     steps:
       - name: Checkout site repo/static-generated branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/site
           ref: static-generated
           path: static-generated
       
       - name: Checkout data repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/data
           path: quatalog-data
@@ -167,13 +167,13 @@ jobs:
     needs: [generate-site]
     steps:
       - name: Checkout static-generated branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/site
           ref: static-generated
           
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
         
       - name: Archive github-pages artifact
         run: |
@@ -186,7 +186,7 @@ jobs:
             -cf "$RUNNER_TEMP/artifact.tar" .
 
       - name: Upload github-pages artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: github-pages
           path: ${{ runner.temp }}/artifact.tar
@@ -207,4 +207,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
