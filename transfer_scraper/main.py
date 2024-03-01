@@ -115,18 +115,19 @@ def main():
 
     transfer_json_path = sys.argv[1]
     state_json_path = sys.argv[2]
-    timeout_seconds = int(sys.argv[3] or 120) * 60
+    timeout_seconds = int(sys.argv[3] if len(sys.argv) == 4 else 120) * 60
 
     # Set up timeout so that the GH action does not run forever, pretend it's ^C
+    print(f"Setting timeout to {timeout_seconds} seconds", file=sys.stderr)
     signal(SIGALRM, lambda a, b: raise_(KeyboardInterrupt))
     alarm(timeout_seconds)
 
     options = webdriver.FirefoxOptions()
+    options.add_argument("--headless")
+
     user_agent = UserAgent().random
-    print(f"Using randomized user agent {user_agent}", file=sys.stderr)
-    if sys.argv[-1] != "gui":
-        options.add_argument("--headless")
     options.set_preference("general.useragent.override", user_agent)
+    print(f"Using randomized user agent {user_agent}", file=sys.stderr)
 
     driver = webdriver.Firefox(options=options)
     driver.get(
