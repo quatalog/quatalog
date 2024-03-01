@@ -126,6 +126,10 @@ def main():
 
     user_agent = UserAgent().random
     options.set_preference("general.useragent.override", user_agent)
+    # options.set_preference("network.proxy.socks", )
+    # options.set_preference("network.proxy.socks_port", )
+    # options.set_preference("network.proxy.socks_remote_dns", True)
+    # options.set_preference("network.proxy.type", 1)
     print(f"Using randomized user agent {user_agent}", file=sys.stderr)
 
     driver = webdriver.Firefox(options=options)
@@ -211,7 +215,7 @@ def main():
                 try:
                     course_pages_len = int(
                         driver.find_element(
-                            "id", "lblInstWithEQPaginationInfo"
+                            "id", "lblCourseEQPaginationInfo"
                         ).text.split()[-1]
                     )
                 except NoSuchElementException:
