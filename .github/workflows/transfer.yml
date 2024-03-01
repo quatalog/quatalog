@@ -1,7 +1,10 @@
 name: Scrape transfer and update file
+run-name: Scrape transfer and update file
 on:
-  schedule:
-  - cron: '*/15 * * * *'
+  # schedule:
+  # - cron: '*/15 * * * *'
+  repository_dispatch:
+    types: transfer-scraper
   workflow_dispatch:
     inputs:
       timeout:
@@ -87,3 +90,17 @@ jobs:
           git add transfer.json transfer_state.json
           git commit -m "$(date)" || exit 0
           git push
+
+  re-run-scraper:
+    name: Tell Github to run this workflow again
+    runs-on: ubuntu-latest
+    needs: [push-new-data]
+    steps:
+      - name: Tell Github to run this workflow again
+        run: |
+          curl -L \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token ${{ secrets.PUSH_TOKEN }}" \
+            --request POST \
+            --data '{"event_type": "transfer-scraper"}' \
+            "https://api.github.com/repos/quatalog/quatalog/dispatches"
