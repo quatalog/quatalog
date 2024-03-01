@@ -21,13 +21,12 @@ def raise_(ex):
     raise ex
 
 
-def normalize_class_name(input):
-    text = list(input)
-    for i in range(1, len(text)):
-        if (text[i - 1] == " ") or (text[i - 1] == text[i] == "I"):
-            continue
-        text[i] = text[i].lower()
-    return "".join(text)
+# Fix course titles accounting for Roman numerals up to X
+def normalize_title(input):
+    s = " ".join(input.split())
+    s = re.sub(r"[A-Zaz]+('[A-Za-z]+)?", lambda m: m.group(0).capitalize(), s)
+    s = re.sub(r"\b(Viii|Vii|Vi|Iv|Ix|Iii|Ii)\b", lambda a: a.group(0).upper(), s)
+    return s.strip()
 
 
 def wait(ec):
@@ -53,12 +52,12 @@ def scrape_course_card(html_id, i, note):
     if trs[1].find_element(By.TAG_NAME, "td").get_attribute("colspan") == "2":
         course_desc = trs[1].text
 
-    course_department = (
+    course_department = normalize_title(
         next((x for x in trs if x.text.strip().startswith("Department:")))
         .find_elements(By.TAG_NAME, "td")[1]
-        .text.title()
+        .text
     )
-    course_catalog = (
+    course_catalog = normalize_title(
         next((x for x in trs if x.text.strip().startswith("Source catalog:")))
         .find_elements(By.TAG_NAME, "td")[1]
         .text
@@ -69,10 +68,10 @@ def scrape_course_card(html_id, i, note):
             i for i, v in enumerate(course_name_and_id) if bool(re.search(r"\d", v))
         )
         course_id = " ".join(course_name_and_id[0:k])
-        course_name = normalize_class_name(" ".join(course_name_and_id[k:]))
+        course_name = normalize_title(" ".join(course_name_and_id[k:]))
     except StopIteration:  # Handling for Not Transferrable
         course_id = course_name_and_id[0]
-        course_name = normalize_class_name(" ".join(course_name_and_id[1:]))
+        course_name = normalize_title(" ".join(course_name_and_id[1:]))
 
     if not note:
         try:
@@ -202,8 +201,8 @@ def main():
                 fields = institution_link.find_element(By.XPATH, "../..").find_elements(
                     By.CSS_SELECTOR, ".gdv_boundfield_uppercase"
                 )
-                inst_name = institution_link.text.title().strip()
-                city = fields[0].text.title().strip()
+                inst_name = normalize_title(institution_link.text)
+                city = normalize_title(fields[0].text)
                 us_state = fields[1].text.strip()
 
                 institution_link.click()
