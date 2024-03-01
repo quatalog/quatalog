@@ -298,7 +298,7 @@ def main():
                                 }
                             ]
                             state["course_idx"] += 1
-                        except Exception as e:
+                        except (Exception, KeyboardInterrupt) as e:
                             institutions.update(
                                 {
                                     inst_name: {
