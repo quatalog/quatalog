@@ -24,7 +24,7 @@ def raise_(ex):
 # Fix course titles accounting for Roman numerals up to X
 def normalize_title(input):
     s = " ".join(input.split())
-    s = re.sub(r"[A-Za-z]+('[A-Za-z]+)?", lambda m: m.group(0).capitalize(), s)
+    s = re.sub(r"[A-Za-z]+(['‘’][A-Za-z]+)?", lambda m: m.group(0).capitalize(), s)
     s = re.sub(r"\b(Viii|Vii|Vi|Iv|Ix|Iii|Ii)\b", lambda a: a.group(0).upper(), s)
     return s.strip()
 
