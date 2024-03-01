@@ -107,15 +107,15 @@ def scrape_course_card(html_id, i, note):
 def main():
     global driver
 
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3 && len(sys.argv) != 4:
         print(
-            f"USAGE: python {sys.argv[0]} <transfer file> <state file> <timeout minutes>"
+            f"USAGE: python {sys.argv[0]} <transfer file> <state file> [timeout minutes]"
         )
         exit(1)
 
     transfer_json_path = sys.argv[1]
     state_json_path = sys.argv[2]
-    timeout_seconds = int(sys.argv[3]) * 60
+    timeout_seconds = int(sys.argv[3] or 120) * 60
 
     # Set up timeout so that the GH action does not run forever, pretend it's ^C
     signal(SIGALRM, lambda a, b: raise_(KeyboardInterrupt))
