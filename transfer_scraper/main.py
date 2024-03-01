@@ -107,7 +107,7 @@ def scrape_course_card(html_id, i, note):
 def main():
     global driver
 
-    if len(sys.argv) != 3 && len(sys.argv) != 4:
+    if len(sys.argv) != 3 and len(sys.argv) != 4:
         print(
             f"USAGE: python {sys.argv[0]} <transfer file> <state file> [timeout minutes]"
         )
