@@ -46,13 +46,16 @@ jobs:
 
       - name: Scrape transfer guide
         run: |
-          python3 quatalog-scraping/transfer_scraper/main.py data/transfer.json data/transfer_state.json ${{ github.event.inputs.timeout }}
+          mkdir new-data
+          rsync -avzh data/transfer.json new-data
+          rsync -avzh data/transfer_state.json new-data
+          python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout }}
 
       - name: Upload data to artifact
         uses: actions/upload-artifact@v4
         with:
           name: transfer-data
-          path: data/
+          path: new-data/
 
   push-new-data:
     name: Push new data to data repo
@@ -74,7 +77,7 @@ jobs:
 
       - name: Copy data to repo directory
         run: |
-          rsync -avz data/ quatalog-data/
+          rsync -avzh data/ quatalog-data/
 
       - name: Push new data
         working-directory: quatalog-data
