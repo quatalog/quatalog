@@ -101,12 +101,17 @@ def scrape_course_card(html_id, i, note):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print(f"USAGE: python {sys.argv[0]} <transfer file> <state file>")
+    if len(sys.argv) != 4:
+        print(f"USAGE: python {sys.argv[0]} <transfer file> <state file> <timeout minutes>")
         exit(1)
 
     transfer_json_path = sys.argv[1]
     state_json_path = sys.argv[2]
+    timeout_seconds = int(sys.argv[3]) * 60
+
+    # Set up timeout so that the GH action does not run forever, pretend it's ^C
+    signal(SIGALRM, lambda a, b: raise_(KeyboardInterrupt))
+    alarm(timeout_seconds)
 
     options = webdriver.FirefoxOptions()
     user_agent = UserAgent().random
@@ -136,10 +141,6 @@ def main():
     print("Loaded state: ", end="", file=sys.stderr)
     json.dump(state, sys.stderr, indent=4)
     print("", file=sys.stderr)
-
-    # Set up 2hr timeout so that the GH action does not run forever, pretend it's ^C
-    signal(SIGALRM, lambda a, b: raise_(KeyboardInterrupt))
-    alarm(60 * 60 * 2)
 
     try:
         curr_page = 1

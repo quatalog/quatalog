@@ -1,8 +1,14 @@
 name: Scrape transfer and update file
 on:
+# schedule:
+#   - cron: '15 * * * *'
   workflow_dispatch:
-#  schedule:
-#    - cron: '15 * * * *'
+    inputs:
+      timeout:
+        description: "Timeout time"
+        required: true
+        type: number
+        default: 120
 concurrency:
   group: transfer-scraper
 
@@ -39,7 +45,7 @@ jobs:
 
       - name: Scrape transfer guide
         run: |
-          python3 quatalog-scraping/transfer_scraper/main.py data/transfer.json data/transfer_state.json
+          python3 quatalog-scraping/transfer_scraper/main.py data/transfer.json data/transfer_state.json ${{ github.event.inputs.timeout }}
 
       - name: Upload data to artifact
         uses: actions/upload-artifact@v4
@@ -53,14 +59,14 @@ jobs:
     needs: [scrape-data]
     steps:
       - name: Clone Quatalog data
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: quatalog/data
           path: quatalog-data
           token: ${{ secrets.PUSH_TOKEN }}
 
       - name: Download data from artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: transfer-data
           path: data/
