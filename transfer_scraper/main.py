@@ -30,7 +30,9 @@ def normalize_class_name(input):
     return "".join(text)
 
 
-def wait(driver, ec):
+def wait(ec):
+    global driver
+
     WebDriverWait(
         driver, 20, ignored_exceptions=[StaleElementReferenceException]
     ).until(ec)
@@ -38,6 +40,8 @@ def wait(driver, ec):
 
 
 def scrape_course_card(html_id, i, note):
+    global driver
+
     trs = (
         driver.find_element("id", html_id)
         .find_elements(By.CSS_SELECTOR, ".course-detail")[i]
@@ -101,8 +105,12 @@ def scrape_course_card(html_id, i, note):
 
 
 def main():
+    global driver
+
     if len(sys.argv) != 4:
-        print(f"USAGE: python {sys.argv[0]} <transfer file> <state file> <timeout minutes>")
+        print(
+            f"USAGE: python {sys.argv[0]} <transfer file> <state file> <timeout minutes>"
+        )
         exit(1)
 
     transfer_json_path = sys.argv[1]
@@ -119,6 +127,7 @@ def main():
     if sys.argv[-1] != "gui":
         options.add_argument("--headless")
     options.set_preference("general.useragent.override", user_agent)
+
     driver = webdriver.Firefox(options=options)
     driver.get(
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
