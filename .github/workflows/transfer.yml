@@ -1,5 +1,7 @@
 name: Scrape transfer and update file
 run-name: Scrape transfer and update file
+env:
+  DEFAULT_TIMEOUT: 45
 on:
   # schedule:
   # - cron: '*/15 * * * *'
@@ -11,7 +13,7 @@ on:
         description: "Timeout time"
         required: true
         type: number
-        default: 120
+        default: 2
 concurrency:
   group: transfer-scraper
 
@@ -52,7 +54,7 @@ jobs:
           mkdir new-data
           rsync -avzh data/transfer.json new-data
           rsync -avzh data/transfer_state.json new-data
-          python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout }}
+          python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout || env.DEFAULT_TIMEOUT }}
 
       - name: Upload data to artifact
         uses: actions/upload-artifact@v4
