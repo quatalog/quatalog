@@ -181,7 +181,7 @@ def main():
                         jumpable_pages[max(jumpable_pages)].click()
                         curr_page = max(jumpable_pages)
 
-                    wait(driver, EC.staleness_of(page))
+                    wait(EC.staleness_of(page))
                     sleep(random.uniform(3, 6))
                     page = driver.find_element("id", f"gdvInstWithEQ")
 
@@ -206,7 +206,7 @@ def main():
                 us_state = fields[1].text.strip()
 
                 institution_link.click()
-                wait(driver, EC.staleness_of(institution_link))
+                wait(EC.staleness_of(institution_link))
 
                 try:
                     course_pages_len = int(
@@ -240,7 +240,6 @@ def main():
 
                         try:
                             wait(
-                                driver,
                                 EC.element_to_be_clickable(
                                     (By.CSS_SELECTOR, ".modal-header button")
                                 ),
@@ -320,7 +319,6 @@ def main():
 
                 driver.find_element("id", "btnSwitchView").click()
                 wait(
-                    driver,
                     EC.text_to_be_present_in_element(
                         ("id", "lblInstWithEQPaginationInfo"), str(state["inst_pg"])
                     ),
