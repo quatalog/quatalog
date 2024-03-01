@@ -159,7 +159,6 @@ def main():
 
             if state["inst_pg"] != 1:
                 while curr_page != state["inst_pg"]:
-                    print(f"Jumping to institution page {curr_page}", file=sys.stderr)
                     jumpable_pages = {
                         int(x.get_attribute("href").split("'")[3][5:]): x
                         for x in driver.find_elements(
@@ -181,6 +180,7 @@ def main():
                     else:
                         jumpable_pages[max(jumpable_pages)].click()
                         curr_page = max(jumpable_pages)
+                    print(f"Jumping to institution page {curr_page}", file=sys.stderr)
 
                     wait(EC.staleness_of(page))
                     sleep(random.uniform(3, 6))
