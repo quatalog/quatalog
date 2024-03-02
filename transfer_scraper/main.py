@@ -103,6 +103,38 @@ def scrape_course_card(html_id, i, note):
         }
 
 
+def jump_to_page(curr_page, to_page, num_pages, postback_type, pagination_type):
+    page = driver.find_element("id", postback_type)
+    if num_pages == 1:
+        return 1, page
+    while curr_page != to_page:
+        jumpable_pages = {
+            int(x.get_attribute("href").split("'")[3][5:]): x
+            for x in driver.find_elements(
+                By.CSS_SELECTOR,
+                """a[href^="javascript:__doPostBack('"""
+                + postback_type
+                + """','Page$"]""",
+            )
+        }
+        curr_page = int(driver.find_element("id", pagination_type).text.split()[-3])
+        if to_page in jumpable_pages:
+            jumpable_pages[to_page].click()
+            curr_page = to_page
+        elif to_page < min(jumpable_pages):
+            jumpable_pages[min(jumpable_pages)].click()
+            curr_page = min(jumpable_pages)
+        else:
+            jumpable_pages[max(jumpable_pages)].click()
+            curr_page = max(jumpable_pages)
+        print(f"Jumping to {postback_type} page {curr_page}", file=sys.stderr)
+
+        wait(EC.staleness_of(page))
+        sleep(random.uniform(3, 6))
+        page = driver.find_element("id", postback_type)
+    return curr_page, page
+
+
 def main():
     global driver
 
@@ -126,7 +158,7 @@ def main():
 
     user_agent = UserAgent().random
     options.set_preference("general.useragent.override", user_agent)
-    # options.set_preference("network.proxy.socks", )
+    # options.set_preference("network.proxy.socks", "")
     # options.set_preference("network.proxy.socks_port", )
     # options.set_preference("network.proxy.socks_remote_dns", True)
     # options.set_preference("network.proxy.type", 1)
@@ -156,44 +188,22 @@ def main():
     print("", file=sys.stderr)
 
     try:
-        curr_page = 1
+        curr_inst_page = 1
         while state["inst_pg"] <= num_pages:
-            page = driver.find_element("id", f"gdvInstWithEQ")
-
-            if state["inst_pg"] != 1:
-                while curr_page != state["inst_pg"]:
-                    jumpable_pages = {
-                        int(x.get_attribute("href").split("'")[3][5:]): x
-                        for x in driver.find_elements(
-                            By.CSS_SELECTOR,
-                            """a[href^="javascript:__doPostBack('gdvInstWithEQ','Page$"]""",
-                        )
-                    }
-                    curr_page = int(
-                        driver.find_element(
-                            "id", "lblInstWithEQPaginationInfo"
-                        ).text.split()[-3]
-                    )
-                    if state["inst_pg"] in jumpable_pages:
-                        jumpable_pages[state["inst_pg"]].click()
-                        curr_page = state["inst_pg"]
-                    elif state["inst_pg"] < min(jumpable_pages):
-                        jumpable_pages[min(jumpable_pages)].click()
-                        curr_page = min(jumpable_pages)
-                    else:
-                        jumpable_pages[max(jumpable_pages)].click()
-                        curr_page = max(jumpable_pages)
-                    print(f"Jumping to institution page {curr_page}", file=sys.stderr)
-
-                    wait(EC.staleness_of(page))
-                    sleep(random.uniform(3, 6))
-                    page = driver.find_element("id", f"gdvInstWithEQ")
+            curr_inst_page, page = jump_to_page(
+                curr_inst_page,
+                state["inst_pg"],
+                num_pages,
+                "gdvInstWithEQ",
+                "lblInstWithEQPaginationInfo",
+            )
 
             inst_list_len = len(
                 page.find_elements(
                     By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
                 )
             )
+
             while state["inst_idx"] < inst_list_len:
                 institution_link = driver.find_element(
                     "id", "gdvInstWithEQ"
@@ -223,15 +233,25 @@ def main():
 
                 try:
                     courses = institutions[inst_name]["courses"]
-                except:
+                except Exception:
                     courses = []
 
+                curr_course_page = 1
                 while state["course_pg"] <= course_pages_len:
+                    curr_course_page, page = jump_to_page(
+                        curr_course_page,
+                        state["course_pg"],
+                        course_pages_len,
+                        "gdvCourseEQ",
+                        "lblCourseEQPaginationInfo",
+                    )
+
                     course_links_len = len(
-                        driver.find_element("id", "gdvCourseEQ").find_elements(
+                        page.find_elements(
                             By.CSS_SELECTOR, "a[id^=gdvCourseEQ_btnViewCourseEQDetail_]"
                         )
                     )
+
                     while state["course_idx"] < course_links_len:
                         course_link = driver.find_element(
                             "id", "gdvCourseEQ"
@@ -315,6 +335,7 @@ def main():
                             raise e
                     state["course_idx"] = 0
                     state["course_pg"] += 1
+
                 institutions.update(
                     {inst_name: {"city": city, "state": us_state, "courses": courses}}
                 )
