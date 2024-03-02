@@ -169,7 +169,7 @@ def main():
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
 
-    print(f'Title is {driver.find_element(By.TAG_NAME, "title").get_attribute("innerText")}', file=sys.stderr)
+    print(f'Title is {driver.find_element(By.TAG_NAME, "title").get_attribute("innerText").strip()}', file=sys.stderr)
 
     num_pages = int(
         driver.find_element("id", "lblInstWithEQPaginationInfo").text.split()[-1]
