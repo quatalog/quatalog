@@ -110,6 +110,7 @@ jobs:
             
       - name: Merge data
         run: |
+          mkdir -p quatalog-site/courses quatalog-site/json
           rsync -avz courses/ quatalog-site/courses/
           rsync -avz searchable_catalog.json quatalog-site/json/searchable_catalog.json
           rsync -avz courses_list.json quatalog-site/json/courses_list.json
