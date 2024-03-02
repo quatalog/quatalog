@@ -82,6 +82,7 @@ jobs:
 
       - name: Copy data to repo directory
         run: |
+          ls -lsa data
           rsync -avzh data/ quatalog-data/
 
       - name: Push new data
