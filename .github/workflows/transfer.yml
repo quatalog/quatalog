@@ -49,12 +49,14 @@ jobs:
         run: |
           echo "Public IP: $(curl -s 'https://ipinfo.io/ip')"
 
-      - name: Scrape transfer guide
+      - name: Copy data to temp dir
         run: |
           mkdir new-data
           dd status=progress if='data/transfer.json' of='new-data/transfer.json'
           dd status=progress if='data/transfer_state.json' of='new-data/transfer_state.json'
-          echo
+
+      - name: Scrape transfer guide
+        run: |
           python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout || env.DEFAULT_TIMEOUT }}
 
       - name: Upload data to artifact
