@@ -52,7 +52,9 @@ jobs:
       - name: Scrape transfer guide
         run: |
           mkdir new-data
-          rsync -avzh --stats 'data/transfer.json data/transfer_state.json' new-data
+          rsync -avzh --stats 'data/transfer.json' 'new-data'
+          rsync -azvh --stats 'data/transfer_state.json' 'new-data'
+          echo
           python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout || env.DEFAULT_TIMEOUT }}
 
       - name: Upload data to artifact
@@ -82,7 +84,8 @@ jobs:
       - name: Copy data to repo directory
         run: |
           ls -lsa data
-          rsync -avzh --stats 'data/transfer.json data/transfer_state.json' quatalog-data
+          rsync -avzh --stats 'data/transfer.json' 'quatalog-data'
+          rsync -azvh --stats 'data/transfer_state.json' 'quatalog-data'
 
       - name: Push new data
         working-directory: quatalog-data
