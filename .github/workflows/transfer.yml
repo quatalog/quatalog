@@ -52,8 +52,8 @@ jobs:
       - name: Scrape transfer guide
         run: |
           mkdir new-data
-          rsync -avzh --stats 'data/transfer.json' 'new-data'
-          rsync -azvh --stats 'data/transfer_state.json' 'new-data'
+          dd status=progress if='data/transfer.json' of='new-data/transfer.json'
+          dd status=progress if='data/transfer_state.json' of='new-data/transfer_state.json'
           echo
           python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout || env.DEFAULT_TIMEOUT }}
 
@@ -84,8 +84,8 @@ jobs:
       - name: Copy data to repo directory
         run: |
           ls -lsa data
-          rsync -avzh --stats 'data/transfer.json' 'quatalog-data'
-          rsync -azvh --stats 'data/transfer_state.json' 'quatalog-data'
+          dd status=progress if='data/transfer.json' of='quatalog-data/transfer.json'
+          dd status=progress if='data/transfer_state.json' of='quatalog-data/transfer_state.json'
 
       - name: Push new data
         working-directory: quatalog-data
