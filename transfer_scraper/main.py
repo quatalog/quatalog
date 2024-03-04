@@ -169,7 +169,10 @@ def main():
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
 
-    print(f'Title is {driver.find_element(By.TAG_NAME, "title").get_attribute("innerText").strip()}', file=sys.stderr)
+    print(
+        f'Title is {driver.find_element(By.TAG_NAME, "title").get_attribute("innerText").strip()}',
+        file=sys.stderr,
+    )
 
     num_pages = int(
         driver.find_element("id", "lblInstWithEQPaginationInfo").text.split()[-1]
@@ -188,6 +191,9 @@ def main():
     print("Loaded state: ", end="", file=sys.stderr)
     json.dump(state, sys.stderr, indent=4)
     print("", file=sys.stderr)
+
+    if state["inst_pg"] > num_pages:
+        raise Exception
 
     try:
         curr_inst_page = 1
@@ -351,7 +357,7 @@ def main():
                     ),
                 )
             state["inst_idx"] = 0
-            state["inst_pg"] = (state["inst_pg"] % num_pages) + 1
+            state["inst_pg"] += 1
 
     except (Exception, KeyboardInterrupt) as e:
         print("Program hits exception and will save and terminate", file=sys.stderr)
