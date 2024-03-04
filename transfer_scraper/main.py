@@ -130,7 +130,7 @@ def jump_to_page(curr_page, to_page, num_pages, postback_type, pagination_type):
         print(f"Jumping to {postback_type} page {curr_page}", file=sys.stderr)
 
         wait(EC.staleness_of(page))
-        sleep(random.uniform(3, 6))
+        sleep(random.uniform(400, 1900) / 1000)
         page = driver.find_element("id", postback_type)
     return curr_page, page
 
