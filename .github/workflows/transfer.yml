@@ -3,111 +3,26 @@ run-name: Scrape transfer and update file
 env:
   DEFAULT_TIMEOUT: 45
 on:
-  # schedule:
-  # - cron: '*/15 * * * *'
-  repository_dispatch:
-    types: transfer-scraper
   workflow_dispatch:
-    inputs:
-      timeout:
-        description: "Timeout time"
-        required: true
-        type: number
-        default: 2
-concurrency:
-  group: transfer-scraper
 
 jobs:
-  scrape-data:
-    name: Scrape transfer guide
+  starter:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout scraping repo
-        uses: actions/checkout@v4
-        with:
-          path: quatalog-scraping
-
-      - name: Checkout data repo
-        uses: actions/checkout@v4
-        with:
-          repository: quatalog/data
-          path: data
-
-      - name: Set up python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: quatalog-scraping/transfer_scraper
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r 'requirements.txt'
-
-      - name: Log IP
-        run: |
-          echo "Public IP: $(curl -s 'https://ipinfo.io/ip')"
-
-      - name: Copy data to temp dir
-        run: |
-          mkdir new-data
-          dd status=progress if='data/transfer.json' of='new-data/transfer.json'
-          dd status=progress if='data/transfer_state.json' of='new-data/transfer_state.json'
-
-      - name: Scrape transfer guide
-        run: |
-          python3 quatalog-scraping/transfer_scraper/main.py new-data/transfer.json new-data/transfer_state.json ${{ github.event.inputs.timeout || env.DEFAULT_TIMEOUT }}
-
-      - name: Upload data to artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: transfer-data
-          path: new-data/
-
-  push-new-data:
-    name: Push new data to data repo
+    - name: Create matrix parameters
+      id: matrix-params
+      run: |
+        NUM_PAGES="$(curl -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0' 'https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce' | grep -e 'lblInstWithEQPaginationInfo' | grep -Poie '(?<=of )[0-9]*')"
+        MATRIX_PARAMS="$(seq -s "," 1 "$NUM_PAGES")"
+        MATRIX_PARAMS="\"page\": $(sed -e 's/,/}, {"page": /g' <<< "$MATRIX_PARAMS")"
+        echo "matrix-params={\"include\": [{ "$MATRIX_PARAMS" }]}" | tee $GITHUB_OUTPUT
+    outputs:
+      matrix-params: ${{ steps.matrix-params.outputs.matrix-params }}
+  matrix-job:
     runs-on: ubuntu-latest
-    needs: [scrape-data]
+    needs: starter
+    strategy:
+      matrix: ${{ fromJson(needs.starter.outputs.matrix-params) }}
     steps:
-      - name: Clone Quatalog data
-        uses: actions/checkout@v4
-        with:
-          repository: quatalog/data
-          path: quatalog-data
-          token: ${{ secrets.PUSH_TOKEN }}
-
-      - name: Download data from artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: transfer-data
-          path: data
-
-      - name: Copy data to repo directory
-        run: |
-          ls -lsa data
-          dd status=progress if='data/transfer.json' of='quatalog-data/transfer.json'
-          dd status=progress if='data/transfer_state.json' of='quatalog-data/transfer_state.json'
-
-      - name: Push new data
-        working-directory: quatalog-data
-        run: |
-          git config user.name "Quatalog Updater"
-          git config user.email "github_actions@quatalog.com"
-          git add transfer.json transfer_state.json
-          git commit -m "$(date)" || exit 0
-          git push
-
-  re-run-scraper:
-    name: Tell Github to run this workflow again
-    runs-on: ubuntu-latest
-    needs: [push-new-data]
-    steps:
-      - name: Tell Github to run this workflow again
-        run: |
-          curl -L \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: token ${{ secrets.PUSH_TOKEN }}" \
-            --request POST \
-            --data '{"event_type": "transfer-scraper"}' \
-            "https://api.github.com/repos/quatalog/quatalog/dispatches"
+      - run: |
+          echo ${{ matrix.page }}
