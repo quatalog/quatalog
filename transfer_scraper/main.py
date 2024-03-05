@@ -3,22 +3,17 @@ import html
 import sys
 import re
 import os.path
-import traceback
 from time import sleep
 import random
-from signal import alarm, SIGALRM, signal
 from fake_useragent import UserAgent
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import StaleElementReferenceException
-from selenium.common.exceptions import TimeoutException
-from selenium.common.exceptions import NoSuchElementException
-
-
-def raise_(ex):
-    raise ex
+from selenium.common.exceptions import (
+    StaleElementReferenceException,
+    NoSuchElementException,
+)
 
 
 # Fix course titles accounting for Roman numerals up to X
@@ -29,84 +24,34 @@ def normalize_title(input):
     return s.strip()
 
 
+# Waits until EC plus some random wait time
 def wait(ec):
     global driver
 
     WebDriverWait(
-        driver, 20, ignored_exceptions=[StaleElementReferenceException]
+        driver, 60, ignored_exceptions=[StaleElementReferenceException]
     ).until(ec)
     sleep(random.uniform(400, 1900) / 1000)
 
 
-def scrape_course_card(html_id, i, note):
+# jump_to_page: navigates to a paginated page on this insufferable website
+#
+# curr_page: the current page number
+# to_page: the page number to jump to
+# num_pages: the total number of pages
+# postback_type: javascript:__doPostBack('<this field>','Page$3')
+# pagination_type: <span id="<this field>">PAGE 1 OF 27<br></span>
+def jump_to_page(curr_page, to_page, postback_type, pagination_type):
     global driver
 
-    trs = (
-        driver.find_element("id", html_id)
-        .find_elements(By.CSS_SELECTOR, ".course-detail")[i]
-        .find_elements(By.TAG_NAME, "tr")
-    )
-    course_name_and_id = trs[0].text.split()
-
-    course_desc = ""
-    if trs[1].find_element(By.TAG_NAME, "td").get_attribute("colspan") == "2":
-        course_desc = trs[1].text
-
-    course_department = normalize_title(
-        next((x for x in trs if x.text.strip().startswith("Department:")))
-        .find_elements(By.TAG_NAME, "td")[1]
-        .text
-    )
-    course_catalog = normalize_title(
-        next((x for x in trs if x.text.strip().startswith("Source catalog:")))
-        .find_elements(By.TAG_NAME, "td")[1]
-        .text
-    )
-
+    page = driver.find_element(By.ID, postback_type)
     try:
-        k = 1 + next(
-            i for i, v in enumerate(course_name_and_id) if bool(re.search(r"\d", v))
-        )
-        course_id = " ".join(course_name_and_id[0:k])
-        course_name = normalize_title(" ".join(course_name_and_id[k:]))
-    except StopIteration:  # Handling for Not Transferrable
-        course_id = course_name_and_id[0]
-        course_name = normalize_title(" ".join(course_name_and_id[1:]))
-
-    if not note:
-        try:
-            course_credits = (
-                next((x for x in trs if x.text.strip().startswith("Units:")))
-                .find_elements(By.TAG_NAME, "td")[1]
-                .text.strip()
-            )
-        except:
-            course_credits = ""
-
-        return {
-            "id": course_id,
-            "name": course_name,
-            "credits": course_credits,
-            "desc": course_desc,
-            "department": course_department,
-            "catalog": course_catalog,
-        }
-    else:
-        course_note = driver.find_element("id", "lblCommentsPublic").text.strip()
-        return {
-            "id": course_id,
-            "name": course_name,
-            "note": course_note,
-            "desc": course_desc,
-            "department": course_department,
-            "catalog": course_catalog,
-        }
-
-
-def jump_to_page(curr_page, to_page, num_pages, postback_type, pagination_type):
-    page = driver.find_element("id", postback_type)
-    if num_pages == 1:
+        num_pages = int(driver.find_element(By.ID, pagination_type).text.split()[-1])
+    except NoSuchElementException:
         return 1, page
+
+    if to_page > num_pages or to_page < 1:
+        raise ValueError(f"to_page was out of range ({to_page} not in [1, {num_pages})")
     while curr_page != to_page:
         jumpable_pages = {
             int(x.get_attribute("href").split("'")[3][5:]): x
@@ -117,7 +62,7 @@ def jump_to_page(curr_page, to_page, num_pages, postback_type, pagination_type):
                 + """','Page$"]""",
             )
         }
-        curr_page = int(driver.find_element("id", pagination_type).text.split()[-3])
+        curr_page = int(driver.find_element(By.ID, pagination_type).text.split()[-3])
         if to_page in jumpable_pages:
             jumpable_pages[to_page].click()
             curr_page = to_page
@@ -131,247 +76,166 @@ def jump_to_page(curr_page, to_page, num_pages, postback_type, pagination_type):
 
         wait(EC.staleness_of(page))
         sleep(random.uniform(400, 1900) / 1000)
-        page = driver.find_element("id", postback_type)
+        page = driver.find_element(By.ID, postback_type)
     return curr_page, page
+
+
+# scrape_page: Scrapes a page of institutions
+#
+# page_num: The page to scrape.
+# Note that the current page before running this function must be 1.
+def scrape_page(page_num):
+    jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
+    num_institutions = len(
+        driver.find_elements(
+            By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
+        )
+    )
+    print(f"Scraping page {page_num}, found {num_institutions} links")
+    return [scrape_institution(i) for i in range(0, num_institutions)]
+
+
+# scrape_institution: Scrapes an institution by index.
+#
+# index: the 0-indexed index of the instituion to scrape on the page we are on.
+def scrape_institution(index):
+    # Go to institution page
+    inst_link = driver.find_element(
+        By.ID, f"gdvInstWithEQ_btnCreditFromInstName_{index}"
+    )
+    [inst_name, inst_city, inst_state, _] = [
+        e.text
+        for e in inst_link.find_element(By.XPATH, "../..").find_elements(
+            By.TAG_NAME, "td"
+        )
+    ]
+    inst_name, inst_city = normalize_title(inst_name), normalize_title(inst_city)
+    inst_link.click()
+    wait(EC.staleness_of(inst_link))
+    print(f"Scraping {inst_name} ({inst_city}, {inst_state})")
+
+    # Add all courses
+    try:
+        num_pages = int(
+            driver.find_element(By.ID, "lblCourseEQPaginationInfo").text.split()[-1]
+        )
+    except NoSuchElementException:
+        num_pages = 1
+    for i in range(1, num_pages + 1):
+        jump_to_page(max(1, i - 1), i, "gdvCourseEQ", "lblCourseEQPaginationInfo")
+        driver.find_element(By.ID, "gdvCourseEQ_cbxHeaderCheckAll").click()
+
+    # Open list
+    driver.find_element(By.ID, "btnAddToMyEQList").click()
+    wait(EC.visibility_of_element_located((By.ID, "gdvMyCourseEQList")))
+
+    # Scrape list
+    tds = driver.find_element(By.ID, "gdvMyCourseEQList").find_elements(
+        By.TAG_NAME, "td"
+    )
+
+    transfer_courses = [
+        {
+            "transfer": parse_course_td(transfer_course),
+            "rpi": parse_course_td(rpi_course, note.text.strip()),
+            "begin": begin.text.strip(),
+            "end": end.text.strip(),
+        }
+        for transfer_course, rpi_course, note, begin, end, _ in zip(
+            *[iter(x for x in tds)] * 6
+        )
+    ]
+
+    # Clear list
+    tr = driver.find_element(By.ID, "gdvMyCourseEQList").find_element(By.TAG_NAME, "tr")
+    driver.find_element(By.ID, "btnClearMyList").click()
+    wait(EC.staleness_of(tr))
+
+    # Exit My List menu
+    driver.find_element(By.CSS_SELECTOR, "#udpAddCourseEQToMyList button.close").click()
+
+    # Leave institution page
+    switch_view = driver.find_element(By.ID, "btnSwitchView")
+    switch_view.click()
+    wait(EC.staleness_of(switch_view))
+
+    return {
+        "institution": inst_name,
+        "city": inst_city,
+        "state": inst_state,
+        "courses": transfer_courses,
+    }
+
+
+def parse_course_td(td, note=None):
+    course_info = (
+        html.unescape(td.get_attribute("innerHTML")).strip().split("<br>")[0].split()
+    )
+
+    # Not all schools use the same course code format, so this figures out how long
+    # it is if it exists, it will not exist for Not Transferrable.
+    try:
+        course_id_delim = 1 + list(
+            bool(re.search(r"\d", s)) for s in course_info
+        ).index(True)
+    except ValueError:
+        course_id_delim = 1
+
+    # Same deal with credit counts.
+    try:
+        cr_delim = (
+            len(course_info)
+            - 1
+            - list(bool(re.search(r"\(", s)) for s in course_info[::-1]).index(True)
+        )
+    except ValueError:
+        cr_delim = len(course_info)
+
+    # note serves as a credit count override, since the RPI-side credit counts
+    # are inaccurate
+    out = {
+        "id": " ".join(course_info[:course_id_delim]),
+        "name": normalize_title(" ".join(course_info[course_id_delim:cr_delim])),
+        "catalog": td.find_element(By.TAG_NAME, "span").text,
+    }
+    if note is None:
+        out.update({"credits": str(" ".join(course_info[cr_delim:])[1:-1])}),
+        return out
+    else:
+        out.update({"note": note})
+        return out
 
 
 def main():
     global driver
 
-    if len(sys.argv) != 3 and len(sys.argv) != 4:
-        print(
-            f"USAGE: python {sys.argv[0]} <transfer file> <state file> [timeout minutes]"
-        )
-        exit(1)
+    if len(sys.argv) != 3:
+        print(f"USAGE: python {sys.argv[0]} <page number to scrape> <output file>")
+        return 1
 
-    transfer_json_path = sys.argv[1]
-    state_json_path = sys.argv[2]
-    timeout_seconds = int(sys.argv[3] if len(sys.argv) == 4 else 120) * 60
+    PAGE_NUM_TO_SCRAPE = int(sys.argv[1])
+    OUT_FILENAME = sys.argv[2]
 
-    # Set up timeout so that the GH action does not run forever, pretend it's ^C
-    print(f"Setting timeout to {timeout_seconds} seconds", file=sys.stderr)
-    signal(SIGALRM, lambda a, b: raise_(KeyboardInterrupt))
-    alarm(timeout_seconds)
-
+    print(f"Setting up selenium Firefox emulator")
     options = webdriver.FirefoxOptions()
     options.add_argument("--headless")
 
     user_agent = UserAgent().random
     options.set_preference("general.useragent.override", user_agent)
-    # options.set_preference("network.proxy.socks", "")
-    # options.set_preference("network.proxy.socks_port", )
-    # options.set_preference("network.proxy.socks_remote_dns", True)
-    # options.set_preference("network.proxy.type", 1)
     print(f"Using randomized user agent {user_agent}", file=sys.stderr)
 
     driver = webdriver.Firefox(options=options)
+
+    print(f"Connecting to the TES Public View")
     driver.get(
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
 
-    print(
-        f'Title is {driver.find_element(By.TAG_NAME, "title").get_attribute("innerText").strip()}',
-        file=sys.stderr,
-    )
+    with open("transfer.json", "w") as transferjson:
+        json.dump(scrape_page(PAGE_NUM_TO_SCRAPE), transferjson, indent=4)
 
-    num_pages = int(
-        driver.find_element("id", "lblInstWithEQPaginationInfo").text.split()[-1]
-    )
-    print(f"{num_pages} pages detected", file=sys.stderr)
-
-    state = {"inst_pg": 1, "inst_idx": 0, "course_pg": 1, "course_idx": 0}
-    institutions = {}
-    if os.path.isfile(state_json_path):
-        with open(state_json_path, "r") as statejson:
-            state = json.load(statejson)
-    if os.path.isfile(transfer_json_path):
-        with open(transfer_json_path, "r") as transferjson:
-            institutions = json.load(transferjson)
-
-    print("Loaded state: ", end="", file=sys.stderr)
-    json.dump(state, sys.stderr, indent=4)
-    print("", file=sys.stderr)
-
-    if state["inst_pg"] > num_pages:
-        raise Exception
-
-    try:
-        curr_inst_page = 1
-        while state["inst_pg"] <= num_pages:
-            curr_inst_page, page = jump_to_page(
-                curr_inst_page,
-                state["inst_pg"],
-                num_pages,
-                "gdvInstWithEQ",
-                "lblInstWithEQPaginationInfo",
-            )
-
-            inst_list_len = len(
-                page.find_elements(
-                    By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
-                )
-            )
-
-            while state["inst_idx"] < inst_list_len:
-                institution_link = driver.find_element(
-                    "id", "gdvInstWithEQ"
-                ).find_elements(
-                    By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
-                )[
-                    state["inst_idx"]
-                ]
-                fields = institution_link.find_element(By.XPATH, "../..").find_elements(
-                    By.CSS_SELECTOR, ".gdv_boundfield_uppercase"
-                )
-                inst_name = normalize_title(institution_link.text)
-                city = normalize_title(fields[0].text)
-                us_state = fields[1].text.strip()
-
-                institution_link.click()
-                wait(EC.staleness_of(institution_link))
-
-                try:
-                    course_pages_len = int(
-                        driver.find_element(
-                            "id", "lblCourseEQPaginationInfo"
-                        ).text.split()[-1]
-                    )
-                except NoSuchElementException:
-                    course_pages_len = 1
-
-                try:
-                    courses = institutions[inst_name]["courses"]
-                except Exception:
-                    courses = []
-
-                curr_course_page = 1
-                while state["course_pg"] <= course_pages_len:
-                    curr_course_page, page = jump_to_page(
-                        curr_course_page,
-                        state["course_pg"],
-                        course_pages_len,
-                        "gdvCourseEQ",
-                        "lblCourseEQPaginationInfo",
-                    )
-
-                    course_links_len = len(
-                        page.find_elements(
-                            By.CSS_SELECTOR, "a[id^=gdvCourseEQ_btnViewCourseEQDetail_]"
-                        )
-                    )
-
-                    while state["course_idx"] < course_links_len:
-                        course_link = driver.find_element(
-                            "id", "gdvCourseEQ"
-                        ).find_elements(
-                            By.CSS_SELECTOR, "a[id^=gdvCourseEQ_btnViewCourseEQDetail_]"
-                        )[
-                            state["course_idx"]
-                        ]
-                        course_link.click()
-
-                        try:
-                            wait(
-                                EC.element_to_be_clickable(
-                                    (By.CSS_SELECTOR, ".modal-header button")
-                                ),
-                            )
-
-                            transfer = [
-                                scrape_course_card("lblSendCourseEQDetail", i, False)
-                                for i in range(
-                                    0,
-                                    len(
-                                        driver.find_element(
-                                            "id", "lblSendCourseEQDetail"
-                                        ).find_elements(
-                                            By.CSS_SELECTOR, ".course-detail"
-                                        )
-                                    ),
-                                )
-                            ]
-
-                            rpi = [
-                                scrape_course_card("lblReceiveCourseEQDetail", i, True)
-                                for i in range(
-                                    0,
-                                    len(
-                                        driver.find_element(
-                                            "id", "lblReceiveCourseEQDetail"
-                                        ).find_elements(
-                                            By.CSS_SELECTOR, ".course-detail"
-                                        )
-                                    ),
-                                )
-                            ]
-
-                            print(
-                                f"{inst_name} ({state['inst_idx']}:{state['inst_pg']}/{num_pages}): {transfer[0]['id']} {transfer[0]['name']} -> {rpi[0]['id']} {rpi[0]['name']} ({state['course_idx']}:{state['course_pg']}/{course_pages_len})",
-                                file=sys.stderr,
-                            )
-
-                            begin_date = driver.find_element(
-                                "id", "lblBeginEffectiveDate"
-                            ).text
-                            end_date = driver.find_element(
-                                "id", "lblEndEffectiveDate"
-                            ).text
-
-                            driver.find_element(
-                                By.CSS_SELECTOR, ".modal-header button"
-                            ).click()
-
-                            courses += [
-                                {
-                                    "transfer": transfer,
-                                    "rpi": rpi,
-                                    "begin": begin_date,
-                                    "end": end_date,
-                                }
-                            ]
-                            state["course_idx"] += 1
-                        except (Exception, KeyboardInterrupt) as e:
-                            institutions.update(
-                                {
-                                    inst_name: {
-                                        "city": city,
-                                        "state": us_state,
-                                        "courses": courses,
-                                    }
-                                }
-                            )
-                            raise e
-                    state["course_idx"] = 0
-                    state["course_pg"] += 1
-
-                institutions.update(
-                    {inst_name: {"city": city, "state": us_state, "courses": courses}}
-                )
-                state["course_pg"] = 1
-                state["inst_idx"] += 1
-
-                driver.find_element("id", "btnSwitchView").click()
-                wait(
-                    EC.text_to_be_present_in_element(
-                        ("id", "lblInstWithEQPaginationInfo"), str(state["inst_pg"])
-                    ),
-                )
-            state["inst_idx"] = 0
-            state["inst_pg"] += 1
-
-    except (Exception, KeyboardInterrupt) as e:
-        print("Program hits exception and will save and terminate", file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
-
-    print("Program will terminate with state: ", end="", file=sys.stderr)
-    json.dump(state, sys.stderr, indent=4)
-    print("", file=sys.stderr)
-    with open(transfer_json_path, "w") as transferjson:
-        json.dump(institutions, transferjson, indent=4)
-    with open(state_json_path, "w") as statejson:
-        json.dump(state, statejson, indent=4)
     driver.quit()
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())
