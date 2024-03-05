@@ -231,7 +231,7 @@ def main():
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
 
-    with open("transfer.json", "w") as transferjson:
+    with open(OUT_FILENAME, "w") as transferjson:
         json.dump(scrape_page(PAGE_NUM_TO_SCRAPE), transferjson, indent=4)
 
     driver.quit()
