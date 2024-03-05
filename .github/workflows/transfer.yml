@@ -14,15 +14,15 @@ jobs:
         NUM_PAGES="$(curl -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0' 'https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce' | grep -e 'lblInstWithEQPaginationInfo' | grep -Poie '(?<=of )[0-9]*')"
         MATRIX_PARAMS="$(seq -s "," 1 "$NUM_PAGES")"
         MATRIX_PARAMS="\"page\": $(sed -e 's/,/}, {"page": /g' <<< "$MATRIX_PARAMS")"
-        echo "matrix-params={\"include\": [{ "$MATRIX_PARAMS" }]}" | tee $GITHUB_OUTPUT
+        echo "matrix-params={\"include\": [{"$MATRIX_PARAMS"}]}" | tee $GITHUB_OUTPUT
     outputs:
       matrix-params: ${{ steps.matrix-params.outputs.matrix-params }}
-  matrix-job:
+  scrape-page:
     name: Scrape page
     runs-on: ubuntu-latest
     needs: setup
     strategy:
-      matrix: ${{ fromJson(needs.starter.outputs.matrix-params) }}
+      matrix: ${{ fromJson(needs.setup.outputs.matrix-params) }}
     steps:
       - name: Checkout scraping repo
         uses: actions/checkout@v4
