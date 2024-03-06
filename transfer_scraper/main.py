@@ -98,7 +98,10 @@ def scrape_page(page_num):
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
         except Exception as e:
-            print("Attempt {i} failed to load page, retrying in 25 seconds...")
+            print(
+                f"Attempt {i} failed to load page, retrying in 25 seconds...",
+                file=sys.stderr,
+            )
             sleep(25)
 
     num_institutions = len(
@@ -118,7 +121,8 @@ def scrape_institution_safe(index, page_num):
             return scrape_institution(index, page_num)
         except Exception as e:
             print(
-                f"\tAttempt {i} failed due to {type(e).__name__}: {e}, retrying in 25 seconds..."
+                f"\tAttempt {i} failed due to {type(e).__name__}: {e}, retrying in 25 seconds...",
+                file=sys.stderr,
             )
             sleep(25)
     raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
