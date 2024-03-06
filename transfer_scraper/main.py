@@ -95,12 +95,16 @@ def scrape_page(page_num):
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
+            print(
+                f'Page title: {driver.find_element(By.TAG_NAME, "title").text.strip()}',
+                file=sys.stderr,
+            )
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
         except Exception as e:
             driver.quit()
             print(
-                f"Attempt {i} failed to load page, retrying in 25 seconds...",
+                f"Attempt {i} failed due to {type(e).__name__}: {e}, retrying in 25 seconds...",
                 file=sys.stderr,
             )
             sleep(25)
