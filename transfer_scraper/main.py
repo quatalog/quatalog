@@ -29,7 +29,7 @@ def wait(ec):
     global driver
 
     WebDriverWait(
-        driver, 300, ignored_exceptions=[StaleElementReferenceException]
+        driver, 40, ignored_exceptions=[StaleElementReferenceException]
     ).until(ec)
     sleep(random.uniform(400, 1900) / 1000)
 
@@ -51,7 +51,9 @@ def jump_to_page(curr_page, to_page, postback_type, pagination_type):
         return 1, page
 
     if to_page > num_pages or to_page < 1:
-        raise ValueError(f"to_page was out of range ({to_page} not in [1, {num_pages}])")
+        raise ValueError(
+            f"to_page was out of range ({to_page} not in [1, {num_pages}])"
+        )
     while curr_page != to_page:
         jumpable_pages = {
             int(x.get_attribute("href").split("'")[3][5:]): x
@@ -84,21 +86,39 @@ def jump_to_page(curr_page, to_page, postback_type, pagination_type):
 # page_num: The page to scrape.
 # Note that the current page before running this function must be 1.
 def scrape_page(page_num):
+    global driver
+    global options
+
+    driver = webdriver.Firefox(options=options)
+    driver.get(
+        "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
+    )
     jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
+
     num_institutions = len(
         driver.find_elements(
             By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
         )
     )
+    driver.quit()
+
     print(f"Scraping page {page_num}, found {num_institutions} links", file=sys.stderr)
-    return [scrape_institution(i) for i in range(0, num_institutions)]
+    return [scrape_institution(i, page_num) for i in range(0, num_institutions)]
 
 
 # scrape_institution: Scrapes an institution by index.
 #
 # index: the 0-indexed index of the instituion to scrape on the page we are on.
-def scrape_institution(index):
-    # Go to institution page
+def scrape_institution(index, page_num):
+    global driver
+    global options
+
+    driver = webdriver.Firefox(options=options)
+    driver.get(
+        "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
+    )
+    jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
+
     inst_link = driver.find_element(
         By.ID, f"gdvInstWithEQ_btnCreditFromInstName_{index}"
     )
@@ -155,18 +175,7 @@ def scrape_institution(index):
         )
     ]
 
-    # Clear list
-    tr = driver.find_element(By.ID, "gdvMyCourseEQList").find_element(By.TAG_NAME, "tr")
-    driver.find_element(By.ID, "btnClearMyList").click()
-    wait(EC.staleness_of(tr))
-
-    # Exit My List menu
-    driver.find_element(By.CSS_SELECTOR, "#udpAddCourseEQToMyList button.close").click()
-
-    # Leave institution page
-    switch_view = driver.find_element(By.ID, "btnSwitchView")
-    switch_view.click()
-    wait(EC.staleness_of(switch_view))
+    driver.quit()
 
     return {
         "institution": inst_name,
@@ -217,9 +226,13 @@ def parse_course_td(td, note=None):
 
 def main():
     global driver
+    global options
 
     if len(sys.argv) != 3:
-        print(f"USAGE: python {sys.argv[0]} <page number to scrape> <output file>", file=sys.stderr)
+        print(
+            f"USAGE: python {sys.argv[0]} <page number to scrape> <output file>",
+            file=sys.stderr,
+        )
         return 1
 
     PAGE_NUM_TO_SCRAPE = int(sys.argv[1])
@@ -227,18 +240,11 @@ def main():
 
     print(f"Setting up selenium Firefox emulator", file=sys.stderr)
     options = webdriver.FirefoxOptions()
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
 
     user_agent = UserAgent().random
     options.set_preference("general.useragent.override", user_agent)
     print(f"Using randomized user agent {user_agent}", file=sys.stderr)
-
-    driver = webdriver.Firefox(options=options)
-
-    print(f"Connecting to the TES Public View", file=sys.stderr)
-    driver.get(
-        "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
-    )
 
     with open(OUT_FILENAME, "w") as transferjson:
         json.dump(scrape_page(PAGE_NUM_TO_SCRAPE), transferjson, indent=4)
