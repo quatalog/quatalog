@@ -48,5 +48,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: transfer-page-${{ matrix.page }}
-          path: transfer_scraper/transfer.json
+          path: transfer_scraper/transfer_${{ matrix.page }}.json
 
