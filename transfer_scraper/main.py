@@ -240,7 +240,7 @@ def main():
 
     print(f"Setting up selenium Firefox emulator", file=sys.stderr)
     options = webdriver.FirefoxOptions()
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
 
     user_agent = UserAgent().random
     options.set_preference("general.useragent.override", user_agent)
