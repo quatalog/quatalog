@@ -62,6 +62,7 @@ jobs:
         with:
           repository: quatalog/data
           path: data
+          token: ${{ secrets.PUSH_TOKEN }}
 
       - name: Download partial JSONs
         uses: actions/download-artifact@v4
@@ -72,7 +73,7 @@ jobs:
 
       - name: Combine JSONs
         run: |
-          cat new-data/* | jq -s | tee data/transfer.json
+          cat new-data/* | jq -s 'add' > data/transfer.json
       
       - name: Commit data
         working-directory: data
