@@ -17,6 +17,7 @@ jobs:
         echo "matrix-params={\"include\": [{"$MATRIX_PARAMS"}]}" | tee $GITHUB_OUTPUT
     outputs:
       matrix-params: ${{ steps.matrix-params.outputs.matrix-params }}
+
   scrape-page:
     name: Scrape page
     runs-on: ubuntu-latest
@@ -51,3 +52,33 @@ jobs:
           name: transfer-page-${{ matrix.page }}
           path: transfer_scraper/transfer_${{ matrix.page }}.json
 
+  commit-data:
+    name: Combine and commit data
+    runs-on: ubuntu-latest
+    needs: scrape-page
+    steps:
+      - name: Checkout data repo
+        uses: actions/checkout@v4
+        with:
+          repository: quatalog/data
+          path: data
+
+      - name: Download partial JSONs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: transfer-page-*
+          merge-multiple: true
+          path: new-data
+
+      - name: Combine JSONs
+        run: |
+          cat new-data/* | jq -s | tee data/transfer.json
+      
+      - name: Commit data
+        working-directory: data
+        run: |
+          git config user.name "Quatalog Updater"
+          git config user.email "github_actions@quatalog.com"
+          git add transfer.json
+          git commit -m "$(date)" || exit 0
+          git push
