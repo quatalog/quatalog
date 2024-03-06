@@ -98,11 +98,14 @@ def scrape_page(page_num):
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
         except Exception as e:
+            driver.quit()
             print(
                 f"Attempt {i} failed to load page, retrying in 25 seconds...",
                 file=sys.stderr,
             )
             sleep(25)
+    else:
+        raise Exception(f"Failed to load the main page after 15 attempts, aborting.")
 
     num_institutions = len(
         driver.find_elements(
@@ -120,12 +123,14 @@ def scrape_institution_safe(index, page_num):
         try:
             return scrape_institution(index, page_num)
         except Exception as e:
+            driver.quit()
             print(
                 f"\tAttempt {i} failed due to {type(e).__name__}: {e}, retrying in 25 seconds...",
                 file=sys.stderr,
             )
             sleep(25)
-    raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
+    else:
+        raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
 
 
 # scrape_institution: Scrapes an institution by index.
