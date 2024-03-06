@@ -72,7 +72,6 @@ def jump_to_page(curr_page, to_page, postback_type, pagination_type):
         else:
             jumpable_pages[max(jumpable_pages)].click()
             curr_page = max(jumpable_pages)
-        print(f"Jumping to {postback_type} page {curr_page}", file=sys.stderr)
 
         wait(EC.staleness_of(page))
         sleep(random.uniform(400, 1900) / 1000)
