@@ -75,7 +75,7 @@ jobs:
 
       - name: Combine JSONs
         run: |
-          cat new-data/* | jq -s 'add' > data/transfer.json
+          cat new-data/* | jq -s 'add | sort_by(.institution)' > data/transfer.json
       
       - name: Commit data
         working-directory: data
