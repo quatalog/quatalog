@@ -51,7 +51,7 @@ def jump_to_page(curr_page, to_page, postback_type, pagination_type):
         return 1, page
 
     if to_page > num_pages or to_page < 1:
-        raise ValueError(f"to_page was out of range ({to_page} not in [1, {num_pages})")
+        raise ValueError(f"to_page was out of range ({to_page} not in [1, {num_pages}])")
     while curr_page != to_page:
         jumpable_pages = {
             int(x.get_attribute("href").split("'")[3][5:]): x
@@ -91,7 +91,7 @@ def scrape_page(page_num):
             By.CSS_SELECTOR, "a[id^=gdvInstWithEQ_btnCreditFromInstName_]"
         )
     )
-    print(f"Scraping page {page_num}, found {num_institutions} links")
+    print(f"Scraping page {page_num}, found {num_institutions} links", file=sys.stderr)
     return [scrape_institution(i) for i in range(0, num_institutions)]
 
 
@@ -112,7 +112,7 @@ def scrape_institution(index):
     inst_name, inst_city = normalize_title(inst_name), normalize_title(inst_city)
     inst_link.click()
     wait(EC.staleness_of(inst_link))
-    print(f"Scraping {inst_name} ({inst_city}, {inst_state})")
+    print(f"Scraping {inst_name} ({inst_city}, {inst_state})", file=sys.stderr)
 
     # Add all courses
     try:
@@ -121,9 +121,19 @@ def scrape_institution(index):
         )
     except NoSuchElementException:
         num_pages = 1
-    for i in range(1, num_pages + 1):
-        jump_to_page(max(1, i - 1), i, "gdvCourseEQ", "lblCourseEQPaginationInfo")
-        driver.find_element(By.ID, "gdvCourseEQ_cbxHeaderCheckAll").click()
+
+    try:
+        for i in range(1, num_pages + 1):
+            jump_to_page(max(1, i - 1), i, "gdvCourseEQ", "lblCourseEQPaginationInfo")
+            driver.find_element(By.ID, "gdvCourseEQ_cbxHeaderCheckAll").click()
+    except NoSuchElementException:
+        # Institution has no data
+        return {
+            "institution": inst_name,
+            "city": inst_city,
+            "state": inst_state,
+            "courses": [],
+        }
 
     # Open list
     driver.find_element(By.ID, "btnAddToMyEQList").click()
@@ -210,13 +220,13 @@ def main():
     global driver
 
     if len(sys.argv) != 3:
-        print(f"USAGE: python {sys.argv[0]} <page number to scrape> <output file>")
+        print(f"USAGE: python {sys.argv[0]} <page number to scrape> <output file>", file=sys.stderr)
         return 1
 
     PAGE_NUM_TO_SCRAPE = int(sys.argv[1])
     OUT_FILENAME = sys.argv[2]
 
-    print(f"Setting up selenium Firefox emulator")
+    print(f"Setting up selenium Firefox emulator", file=sys.stderr)
     options = webdriver.FirefoxOptions()
     options.add_argument("--headless")
 
@@ -226,7 +236,7 @@ def main():
 
     driver = webdriver.Firefox(options=options)
 
-    print(f"Connecting to the TES Public View")
+    print(f"Connecting to the TES Public View", file=sys.stderr)
     driver.get(
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
