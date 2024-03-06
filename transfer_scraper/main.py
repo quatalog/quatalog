@@ -232,9 +232,10 @@ def parse_course_td(td, note=None):
         cr_delim = (
             len(course_info)
             - 1
-            - list(bool(re.search(r"\(", s)) for s in course_info[::-1]).index(True)
+            - list(bool(re.search(r"^\([0-9]", s.strip())) for s in course_info[::-1]).index(True)
         )
-    except ValueError:
+        assert bool(re.search(r"[0-9]\)"), course_info[-1])
+    except (ValueError, AssertionError):
         cr_delim = len(course_info)
 
     # note serves as a credit count override, since the RPI-side credit counts
@@ -245,7 +246,7 @@ def parse_course_td(td, note=None):
         "catalog": td.find_element(By.TAG_NAME, "span").text,
     }
     if note is None:
-        out.update({"credits": str(" ".join(course_info[cr_delim:])[1:-1])}),
+        out.update({"credits": str(" ".join(course_info[cr_delim:])[1:-1]).strip()}),
         return out
     else:
         out.update({"note": note})
