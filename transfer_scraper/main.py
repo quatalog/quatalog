@@ -89,11 +89,17 @@ def scrape_page(page_num):
     global driver
     global options
 
-    driver = webdriver.Firefox(options=options)
-    driver.get(
-        "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
-    )
-    jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
+    for i in range(1, 15):
+        try:
+            driver = webdriver.Firefox(options=options)
+            driver.get(
+                "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
+            )
+            jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
+            break
+        except Exception as e:
+            print("Attempt {i} failed to load page, retrying in 25 seconds...")
+            sleep(25)
 
     num_institutions = len(
         driver.find_elements(
@@ -112,9 +118,9 @@ def scrape_institution_safe(index, page_num):
             return scrape_institution(index, page_num)
         except Exception as e:
             print(
-                f"\tAttempt {i} failed due to {type(e).__name__}: {e}, trying again..."
+                f"\tAttempt {i} failed due to {type(e).__name__}: {e}, retrying in 25 seconds..."
             )
-            sleep(40)
+            sleep(25)
     raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
 
 
