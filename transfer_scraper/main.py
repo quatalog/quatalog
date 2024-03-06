@@ -103,15 +103,17 @@ def scrape_page(page_num):
     driver.quit()
 
     print(f"Scraping page {page_num}, found {num_institutions} links", file=sys.stderr)
-    return [scrape_institution(i, page_num) for i in range(0, num_institutions)]
+    return [scrape_institution_safe(i, page_num) for i in range(0, num_institutions)]
 
 
 def scrape_institution_safe(index, page_num):
-    for i in range(1,15):
+    for i in range(1, 15):
         try:
             return scrape_institution(index, page_num)
-        except Exception:
-            print(f"\tAttempt {i} failed, trying again...")
+        except Exception as e:
+            print(
+                f"\tAttempt {i} failed due to {type(e).__name__}: {e}, trying again..."
+            )
             sleep(40)
     raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
 
