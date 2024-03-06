@@ -29,7 +29,7 @@ def wait(ec):
     global driver
 
     WebDriverWait(
-        driver, 60, ignored_exceptions=[StaleElementReferenceException]
+        driver, 300, ignored_exceptions=[StaleElementReferenceException]
     ).until(ec)
     sleep(random.uniform(400, 1900) / 1000)
 
