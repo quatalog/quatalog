@@ -29,7 +29,7 @@ def wait(ec):
     global driver
 
     WebDriverWait(
-        driver, 40, ignored_exceptions=[StaleElementReferenceException]
+        driver, 35, ignored_exceptions=[StaleElementReferenceException]
     ).until(ec)
     sleep(random.uniform(400, 1900) / 1000)
 
@@ -44,6 +44,7 @@ def wait(ec):
 def jump_to_page(curr_page, to_page, postback_type, pagination_type):
     global driver
 
+    wait(EC.visibility_of_element_located((By.ID, postback_type)))
     page = driver.find_element(By.ID, postback_type)
     try:
         num_pages = int(driver.find_element(By.ID, pagination_type).text.split()[-1])
@@ -95,11 +96,6 @@ def scrape_page(page_num):
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
-            wait(EC.visibility_of_element_located((By.ID, "gdvInstWithEQ")))
-            print(
-                f'Page title: {driver.find_element(By.TAG_NAME, "title").text.strip()}',
-                file=sys.stderr,
-            )
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
         except Exception as e:
@@ -149,7 +145,6 @@ def scrape_institution(index, page_num):
     driver.get(
         "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
     )
-    wait(EC.visibility_of_element_located((By.ID, "gdvCourseEQ")))
     jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
 
     inst_link = driver.find_element(
