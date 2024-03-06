@@ -24,7 +24,7 @@ jobs:
     needs: setup
     strategy:
       matrix: ${{ fromJson(needs.setup.outputs.matrix-params) }}
-      fail-fast: false
+      fail-fast: true
     steps:
       - name: Checkout scraping repo
         uses: actions/checkout@v4
