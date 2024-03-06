@@ -106,6 +106,16 @@ def scrape_page(page_num):
     return [scrape_institution(i, page_num) for i in range(0, num_institutions)]
 
 
+def scrape_institution_safe(index, page_num):
+    for i in range(1,15):
+        try:
+            return scrape_institution(index, page_num)
+        except Exception:
+            print(f"\tAttempt {i} failed, trying again...")
+            sleep(40)
+    raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
+
+
 # scrape_institution: Scrapes an institution by index.
 #
 # index: the 0-indexed index of the instituion to scrape on the page we are on.
