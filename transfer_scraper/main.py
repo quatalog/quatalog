@@ -234,7 +234,7 @@ def parse_course_td(td, note=None):
             - 1
             - list(bool(re.search(r"^\([0-9]", s.strip())) for s in course_info[::-1]).index(True)
         )
-        assert bool(re.search(r"[0-9]\)"), course_info[-1])
+        assert bool(re.search(r"[0-9]\)", course_info[-1]))
     except (ValueError, AssertionError):
         cr_delim = len(course_info)
 
