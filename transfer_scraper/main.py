@@ -90,12 +90,14 @@ def scrape_page(page_num):
     global driver
     global options
 
-    for i in range(1, 15):
+    for i in range(1, 4):
         try:
             driver = webdriver.Firefox(options=options)
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
+            wait(EC.visibility_of_element_located((By.TAG_NAME, "body")))
+            print(f'Title: "{driver.title}"', file=sys.stderr)
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
         except Exception as e:
@@ -120,7 +122,7 @@ def scrape_page(page_num):
 
 
 def scrape_institution_safe(index, page_num):
-    for i in range(1, 15):
+    for i in range(1, 4):
         try:
             return scrape_institution(index, page_num)
         except Exception as e:
