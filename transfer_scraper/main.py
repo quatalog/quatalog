@@ -214,12 +214,16 @@ def scrape_institution(index, page_num):
 
 
 def parse_course_td(td, note=None):
-    course_info = (
-        html.unescape(td.get_attribute("innerHTML")).strip().split("<br>")[0].split()
-    )
+    # This regex removes spaces next to parentheses. For example,
+    #       Calculus II ( 04) -> Calculus II (04)
+    course_info = re.sub(
+        "(?<=[\[{(])\s+|\s+(?=[\]})])",
+        "",
+        html.unescape(td.get_attribute("innerHTML")).strip().split("<br>")[0],
+    ).split()
 
     # Not all schools use the same course code format, so this figures out how long
-    # it is if it exists, it will not exist for Not Transferrable.
+    # it is if it exists. It will not exist for Not Transferrable and AP tests.
     try:
         course_id_delim = 1 + list(
             bool(re.search(r"\d", s)) for s in course_info
@@ -227,21 +231,27 @@ def parse_course_td(td, note=None):
     except ValueError:
         course_id_delim = 1
 
-    # Same deal with credit counts.
+    # Same deal with credit counts. Fancy logic here to avoid catching course titles
+    # with parentheses in them which do not have a credit count, this happened 3 times
+    # This also ignores credit counts with "Variable" in them, but ... you try
     try:
-        cr_delim = (
-            len(course_info)
-            - 1
-            - list(
-                bool(re.search(r"^\([0-9]", s.strip())) for s in course_info[::-1]
-            ).index(True)
-        )
-        assert bool(re.search(r"[0-9]\)", course_info[-1]))
+        if course_info[-1] == "()":
+            cr_delim = -1
+        else:
+            cr_delim = (
+                len(course_info)
+                - 1
+                - list(
+                    bool(re.search(r"^\([.]*[0-9]", s.strip()))
+                    for s in course_info[::-1]
+                ).index(True)
+            )
+            assert bool(re.search(r"[0-9]\)", course_info[-1]))
     except (ValueError, AssertionError):
         cr_delim = len(course_info)
 
     # note serves as a credit count override, since the RPI-side credit counts
-    # are inaccurate
+    # are inaccurate.
     out = {
         "id": " ".join(course_info[:course_id_delim]),
         "name": normalize_title(" ".join(course_info[course_id_delim:cr_delim])),
