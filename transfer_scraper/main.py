@@ -195,8 +195,9 @@ def scrape_institution(index, page_num):
 
     transfer_courses = [
         {
-            "transfer": parse_course_td(transfer_course),
-            "rpi": parse_course_td(rpi_course, note.text.strip()),
+            "transfer": parse_course_td(transfer_course, True),
+            "rpi": parse_course_td(rpi_course, False),
+            "note": note.text.strip(),
             "begin": begin.text.strip(),
             "end": end.text.strip(),
         }
@@ -215,15 +216,25 @@ def scrape_institution(index, page_num):
     }
 
 
-def parse_course_td(td, note=None):
+# Scrape course entries. We have a switch to disable including credit counts because the
+# RPI-side credit counts are wrong most of the time and this is clarified in notes.
+def parse_course_td(td, include_credits):
     # This regex removes spaces next to parentheses. For example,
     #       Calculus II ( 04) -> Calculus II (04)
-    course_info = re.sub(
-        "(?<=[\[{(])\s+|\s+(?=[\]})])",
-        "",
-        html.unescape(td.get_attribute("innerHTML")).strip().split("<br>")[0],
-    ).split()
+    td_text = html.unescape(td.get_attribute("innerHTML")).strip().split("<br>")
+    courses_info = [
+        re.sub(
+            "(?<=[\[{(])\s+|\s+(?=[\]})])",
+            "",
+            x,
+        ).split()
+        for x in td_text[: len(td_text) - 3]
+    ]
 
+    return [parse_one_course(x, include_credits) for x in courses_info]
+
+
+def parse_one_course(course_info, include_credits):
     # Not all schools use the same course code format, so this figures out how long
     # it is if it exists. It will not exist for Not Transferrable and AP tests.
     try:
@@ -257,14 +268,10 @@ def parse_course_td(td, note=None):
     out = {
         "id": " ".join(course_info[:course_id_delim]),
         "name": normalize_title(" ".join(course_info[course_id_delim:cr_delim])),
-        "catalog": td.find_element(By.TAG_NAME, "span").text,
     }
-    if note is None:
+    if include_credits:
         out.update({"credits": str(" ".join(course_info[cr_delim:])[1:-1]).strip()}),
-        return out
-    else:
-        out.update({"note": note})
-        return out
+    return out
 
 
 def main():
