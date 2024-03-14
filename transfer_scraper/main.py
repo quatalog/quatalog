@@ -94,7 +94,7 @@ def scrape_page(page_num):
         try:
             driver = webdriver.Firefox(options=options)
             driver.get("https://ipinfo.io/ip")
-            print(f"Trying with IP {driver.page_source}")
+            print(f"Trying with IP {driver.page_source}", file=sys.stderr)
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
