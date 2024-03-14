@@ -93,6 +93,8 @@ def scrape_page(page_num):
     for i in range(1, 4):
         try:
             driver = webdriver.Firefox(options=options)
+            driver.get("https://ipinfo.io/ip")
+            print(f"Trying with IP {driver.page_source}")
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
@@ -102,13 +104,14 @@ def scrape_page(page_num):
             break
         except Exception as e:
             driver.quit()
+
             print(
                 f"Attempt {i} failed due to {type(e).__name__}, retrying in 25 seconds...",
                 file=sys.stderr,
             )
             sleep(25)
     else:
-        raise Exception(f"Failed to load the main page after 15 attempts, aborting.")
+        raise Exception(f"Failed to load the main page after 4 attempts, aborting.")
 
     num_institutions = len(
         driver.find_elements(
@@ -133,7 +136,7 @@ def scrape_institution_safe(index, page_num):
             )
             sleep(25)
     else:
-        raise Exception(f"Failed to scrape {index} after 15 attempts, aborting.")
+        raise Exception(f"Failed to scrape {index} after 4 attempts, aborting.")
 
 
 # scrape_institution: Scrapes an institution by index.
