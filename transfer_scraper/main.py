@@ -94,7 +94,10 @@ def scrape_page(page_num):
         try:
             driver = webdriver.Firefox(options=options)
             driver.get("https://ipinfo.io/ip")
-            print(f"Trying with IP {driver.page_source}", file=sys.stderr)
+            print(
+                f'Trying with IP {driver.find_element(By.TAG_NAME, "body").text}',
+                file=sys.stderr,
+            )
             driver.get(
                 "https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce"
             )
@@ -184,7 +187,7 @@ def scrape_institution(index, page_num):
             "institution": inst_name,
             "city": inst_city,
             "state": inst_state,
-            "courses": [],
+            "transfers": [],
         }
 
     # Open list
@@ -215,7 +218,7 @@ def scrape_institution(index, page_num):
         "institution": inst_name,
         "city": inst_city,
         "state": inst_state,
-        "courses": transfer_courses,
+        "transfers": transfer_courses,
     }
 
 
@@ -234,7 +237,10 @@ def parse_course_td(td, include_credits):
         for x in td_text[: len(td_text) - 3]
     ]
 
-    return [parse_one_course(x, include_credits) for x in courses_info]
+    return {
+        "catalog": td.find_element(By.TAG_NAME, "span").text.strip(),
+        "courses": [parse_one_course(x, include_credits) for x in courses_info],
+    }
 
 
 def parse_one_course(course_info, include_credits):
