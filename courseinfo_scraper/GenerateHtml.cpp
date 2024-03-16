@@ -417,7 +417,7 @@ void generate_table_cell(const int year,
                          std::ostream& os) {
         std::string year_term = std::to_string(year) + term_to_number.at(term);
         const auto& term_offered = terms_offered[year_term];
-        const auto& course_title = term_offered["title"].asString();
+        const auto& course_titles = term_offered["title"];
         const auto& credit_string = generate_credit_string(term_offered["credits"]);
 
         tag(os,TAG::COMPLEX_BEGIN) << R"(<td )";
@@ -437,11 +437,14 @@ void generate_table_cell(const int year,
                         << "&subj_in=" << term_offered["prefix"].asString()
                         << "&crse_in=" << course_id.substr(5,4)
                         << "&schd_in="
-                        << R"(">)" << course_title << " (" << credit_string << "c)</a>";
+                        << R"(">)" << course_titles[0].asString() << " (" << credit_string << "c)";
                 for(const auto& attr : term_offered["attributes"]) {
                         os << ' ' << attr.asString();
                 }
-                os << '\n';
+                for(int i = 1; i < course_titles.size(); i++) {
+                    os << "<br>" << course_titles[i].asString();
+                }
+                os << "</a>" << '\n';
 
                 tag(os,TAG::END,"span");
                 tag(os,TAG::BEGIN,R"(ul class="prof-list")");
@@ -547,7 +550,7 @@ get_course_title_and_description(const std::string& course_id,
         if(catalog_entry) {
                 title = catalog_entry["name"].asString();
         } else {
-                title = terms_offered[latest_term]["title"].asString();
+                title = terms_offered[latest_term]["title"][0].asString();
         }
         if(catalog_entry) {
                 description = catalog_entry["description"].asString();

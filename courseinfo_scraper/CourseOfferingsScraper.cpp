@@ -239,7 +239,15 @@ void handle_everything(const Json::Value& sections,
                        const Json::Value& term_prereqs) {
         Json::Value& course_term = course_terms[term];
         const auto& course_id = course["id"].asString();
-        course_term["title"] = course["title"];
+        // course_term["title"] = course["title"];
+        std::set<std::string> titles;
+        for(const auto& sec : course["sections"]) {
+            titles.insert(sec["title"].asString());
+        }
+        course_term["title"] = Json::arrayValue;
+        for(const auto& title : titles) {
+            course_term["title"].append(title);
+        }
         handle_sections(sections,course_term);
         course_terms["latest_term"] = term;
         handle_attributes(sections[0],course_id,course_term,out_prereqs);
