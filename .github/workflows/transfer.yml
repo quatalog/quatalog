@@ -46,7 +46,7 @@ jobs:
       - name: Run scraper
         working-directory: transfer_scraper
         run: |
-          python3 main.py ${{ matrix.page }} transfer_${{ matrix.page }}.json
+          python3 scrape_page.py ${{ matrix.page }} transfer_${{ matrix.page }}.json
 
       - name: Upload data to artifact
         uses: actions/upload-artifact@v4
