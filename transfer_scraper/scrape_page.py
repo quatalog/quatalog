@@ -306,7 +306,9 @@ def main():
     print(f"Using randomized user agent {user_agent}", file=sys.stderr)
 
     with open(OUT_FILENAME, "w") as transferjson:
-        json.dump(scrape_page(PAGE_NUM_TO_SCRAPE), transferjson, sort_keys=True, indent=2)
+        json.dump(
+            scrape_page(PAGE_NUM_TO_SCRAPE), transferjson, sort_keys=True, indent=2
+        )
 
     driver.quit()
 
