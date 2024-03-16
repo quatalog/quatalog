@@ -33,6 +33,7 @@ jobs:
           python3 scrapers/transfer_scraper/convert_json.py data/transfer.json data/transfer_by_course.json
 
       - name: Commit data
+        working-directory: data
         run: |
           git config user.name "Quatalog Updater"
           git config user.email "github_actions@quatalog.com"
