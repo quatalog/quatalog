@@ -1,0 +1,92 @@
+name: Update transfer guides
+run-name: Update transfer guides
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      generate-csv
+
+jobs:
+  by-courses-json:
+    name: Generate by-courses JSON file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout data repo
+        uses: actions/checkout@v4
+        with:
+          repository: quatalog/data
+          path: data
+          token: ${{ secrets.PUSH_TOKEN }}
+
+      - name: Checkout scraping repo
+        uses: actions/checkout@v4
+        with:
+          path: scrapers
+    
+      - name: Convert to by-courses format
+        run: |
+          python3 scrapers/transfer_scraper/convert_json.py data/transfer.json data/transfer_by_course.json
+
+      - name: Commit data
+        run: |
+          git config user.name "Quatalog Updater"
+          git config user.email "github_actions@quatalog.com"
+          git add transfer_*.json
+          git commit -m "$(date)" || exit 0
+          git push
+
+  generate-csvs:
+    name: Generate transfer guides
+    needs: by-courses-json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout data repo
+        uses: actions/checkout@v4
+        with:
+          repository: quatalog/data
+          path: data
+          token: ${{ secrets.PUSH_TOKEN }}
+
+      - name: Checkout transfer guides repo
+        uses: actions/checkout@v4
+        with:
+          repository: quatalog/transfer_guides
+          path: transfer_guides
+          token: ${{ secrets.PUSH_TOKEN }}
+
+      - name: Checkout scraping repo
+        uses: actions/checkout@v4
+        with:
+          path: scrapers
+
+      - name: Generate CSVs
+        run: |
+          python3 scrapers/transfer_scraper/generate_csv.py data/transfer_by_course.json new_transfer_guides
+
+      - name: Remove stale entries
+        working-directory: transfer_guides
+        run: |
+          git rm *
+
+      - name: Copy CSVs over
+        run: |
+          rsync -azvh new_transfer_guides/ transfer_guides
+
+      - name: Commit transfer guides
+        working-directory: transfer_guides
+        run: |
+          git config user.name "Quatalog Updater"
+          git config user.email "github_actions@quatalog.com"
+          git add .
+          git commit -m "$(date)" || exit 0
+          git push
