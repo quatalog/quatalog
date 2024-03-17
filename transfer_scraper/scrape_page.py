@@ -16,6 +16,10 @@ from selenium.common.exceptions import (
 )
 
 
+class IPBanException(Exception):
+    pass
+
+
 # Fix course titles accounting for Roman numerals up to X
 def normalize_title(input):
     s = " ".join(input.split())
@@ -103,8 +107,14 @@ def scrape_page(page_num):
             )
             wait(EC.visibility_of_element_located((By.TAG_NAME, "body")))
             print(f'Title: "{driver.title}"', file=sys.stderr)
+            if driver.title == "403 Forbidden":
+                raise IPBanException
             jump_to_page(1, page_num, "gdvInstWithEQ", "lblInstWithEQPaginationInfo")
             break
+        except IPBanException as e:
+            driver.quit()
+            print(f"We are IP-banned, exiting now", file=sys.stderr)
+            raise e
         except Exception as e:
             driver.quit()
 
