@@ -73,6 +73,8 @@ jobs:
           git push
 
       - name: Trigger CSV generator
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          event-type: generate-csv
+        run: |
+          curl -H "Accept: application/vnd.github.everest-preview+json" \
+               -H "Authorization: token ${{ secrets.PUSH_TOKEN }}" \
+               -X POST --data '{"event_type": "generate-csv"}' \
+               'https://api.github.com/repos/quatalog/quatalog/dispatches'
