@@ -17,7 +17,7 @@ jobs:
         URL='https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce'
         curl -s -S -H "$UA" "$URL" | tr -d '\0' > home.html
         echo "======================================================================"
-        if [ -z "$(cat "home.html" | grep -A2 "Oops! Page currently not available (")" ]; then
+        if [[ "$(cat "home.html" | grep "Oops! Page currently not available (")" ]]; then
           echo "Transfer guide unavailable"
           exit -1
         fi
