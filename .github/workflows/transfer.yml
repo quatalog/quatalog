@@ -15,8 +15,15 @@ jobs:
       run: |
         UA='User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0'
         URL='https://tes.collegesource.com/publicview/TES_publicview01.aspx?rid=f080a477-bff8-46df-a5b2-25e9affdd4ed&aid=27b576bb-cd07-4e57-84d0-37475fde70ce'
-        curl -s -S -o "home.html" -H "$UA" "$URL"
+        curl -s -S -H "$UA" "$URL" | tr -d '\0' > home.html
+        echo "======================================================================"
+        if [ -z "$(cat "home.html" | grep -A2 "Oops! Page currently not available (")" ]; then
+          echo "Transfer guide unavailable"
+          exit -1
+        fi
+        echo "======================================================================"
         cat "home.html" | grep -A2 "<title>"
+        echo "======================================================================"
         NUM_PAGES="$(cat "home.html" | grep -e 'lblInstWithEQPaginationInfo' | grep -Poie '(?<=of )[0-9]*')"
         echo "Found $NUM_PAGES pages"
         MATRIX_PARAMS="$(seq -s "," 1 "$NUM_PAGES")"
