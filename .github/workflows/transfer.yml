@@ -2,8 +2,8 @@ name: Scrape transfer and update file
 run-name: Scrape transfer and update file
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 4 * * *'
+  # schedule:
+  # - cron: '0 4 * * *'
 
 jobs:
   setup:
